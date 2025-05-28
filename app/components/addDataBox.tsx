@@ -41,6 +41,7 @@ export default function AddDataBox({
     const currentPressButton = useRef<{ type: ShotType | 'foul' | 'flagrant'; isSuccess: boolean } | null>(null);
     const [drawerTranslate, setDrawerTranslate] = useState(0);
     const isDrawerDragging = useRef(false);
+    const hasDeletedRef = useRef(false);
 
     const handleClose = () => {
         const drawer = document.getElementById('add-data-drawer') as HTMLInputElement;
@@ -85,7 +86,29 @@ export default function AddDataBox({
     };
 
     const handleTouchStart = (e: React.TouchEvent, type: ShotType | 'foul' | 'flagrant', isSuccess: boolean) => {
+        hasDeletedRef.current = false;
         currentPressButton.current = { type, isSuccess };
+
+        // 检查是否有可删除的记录
+        if (type === 'foul' || type === 'flagrant') {
+            // 检查犯规记录
+            const foulsCount = type === 'foul' ? stats?.fouls : stats?.flagrantFouls;
+            if (!foulsCount || foulsCount <= 0) {
+                return; // 如果没有犯规记录，不启动长按计时器
+            }
+        } else {
+            // 检查投篮记录
+            const shotStats = stats?.attempts[type as ShotType];
+            if (!shotStats) return;
+
+            if (isSuccess && shotStats.made <= 0) {
+                return; // 如果是删除命中但没有命中记录
+            }
+            if (!isSuccess && (shotStats.total - shotStats.made) <= 0) {
+                return; // 如果是删除不中但没有不中记录
+            }
+        }
+
         const timer = setTimeout(() => {
             if (!currentPressButton.current) return;
             
@@ -97,8 +120,9 @@ export default function AddDataBox({
                     currentPressButton.current.isSuccess
                 );
             }
+            hasDeletedRef.current = true;
             setIsPressing(true);
-        }, 800); // 增加长按时间到800ms，使操作更加明确
+        }, 800);
         setPressTimer(timer);
     };
 
@@ -117,6 +141,16 @@ export default function AddDataBox({
         }
         setIsPressing(false);
         currentPressButton.current = null;
+    };
+
+    const handleClick = (callback?: () => void) => (e: React.MouseEvent) => {
+        if (hasDeletedRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            hasDeletedRef.current = false;
+            return;
+        }
+        callback?.();
     };
 
     const renderShotTypeSection = (type: ShotType, label: string) => {
@@ -138,7 +172,7 @@ export default function AddDataBox({
                             ? 'bg-yellow-500 hover:bg-yellow-600 border-none text-white' 
                             : 'bg-purple-500 hover:bg-purple-600 border-none text-white'}
                         ${isPressing && currentPressButton.current?.type === type && currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
-                    onClick={() => onScoreAdd?.(type, true)}
+                    onClick={handleClick(() => onScoreAdd?.(type, true))}
                     onTouchStart={(e) => handleTouchStart(e, type, true)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -149,7 +183,7 @@ export default function AddDataBox({
                     className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
                         bg-gray-100 hover:bg-gray-200 border-none text-gray-700
                         ${isPressing && currentPressButton.current?.type === type && !currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
-                    onClick={() => onScoreAdd?.(type, false)}
+                    onClick={handleClick(() => onScoreAdd?.(type, false))}
                     onTouchStart={(e) => handleTouchStart(e, type, false)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -181,8 +215,8 @@ export default function AddDataBox({
                     className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
                         bg-amber-500 hover:bg-amber-600 border-none text-white
                         ${isPressing && currentPressButton.current?.type === 'foul' ? 'opacity-50' : ''}`}
-                    onClick={() => onFoulAdd?.(false)}
-                    onTouchStart={(e) => handleTouchStart(e, 'foul', true)}
+                    onClick={handleClick(() => onFoulAdd?.(false))}
+                    onTouchStart={(e) => handleTouchStart(e, 'foul', false)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
@@ -192,8 +226,8 @@ export default function AddDataBox({
                     className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
                         bg-red-500 hover:bg-red-600 border-none text-white
                         ${isPressing && currentPressButton.current?.type === 'flagrant' ? 'opacity-50' : ''}`}
-                    onClick={() => onFoulAdd?.(true)}
-                    onTouchStart={(e) => handleTouchStart(e, 'flagrant', true)}
+                    onClick={handleClick(() => onFoulAdd?.(true))}
+                    onTouchStart={(e) => handleTouchStart(e, 'flagrant', false)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
