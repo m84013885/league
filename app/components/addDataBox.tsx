@@ -87,7 +87,9 @@ export default function AddDataBox({
     const handleTouchStart = (e: React.TouchEvent, type: ShotType | 'foul' | 'flagrant', isSuccess: boolean) => {
         currentPressButton.current = { type, isSuccess };
         const timer = setTimeout(() => {
-            if (currentPressButton.current?.type === 'foul' || currentPressButton.current?.type === 'flagrant') {
+            if (!currentPressButton.current) return;
+            
+            if (currentPressButton.current.type === 'foul' || currentPressButton.current.type === 'flagrant') {
                 onFoulDelete?.(currentPressButton.current.type === 'flagrant');
             } else {
                 onDeleteLastScore?.(
