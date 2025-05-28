@@ -27,7 +27,6 @@ interface AddDataBoxProps {
 
 export default function AddDataBox({
     player,
-    teamName,
     isTeam1,
     onClose,
     onScoreAdd,
@@ -88,7 +87,7 @@ export default function AddDataBox({
 
     const handleTouchStart = (e: React.TouchEvent, type: ShotType | 'foul' | 'flagrant', isSuccess: boolean) => {
         startY.current = e.touches[0].clientY;
-        currentPressButton.current = { type, isSuccess } as any;
+        currentPressButton.current = { type, isSuccess } as { type: ShotType | 'foul' | 'flagrant'; isSuccess: boolean };
         const timer = setTimeout(() => {
             setIsPressing(true);
         }, 500); // 500ms长按阈值

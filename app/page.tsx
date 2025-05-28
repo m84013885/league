@@ -117,6 +117,7 @@ export default function Home() {
       setScoreHistory(parsedData.scoreHistory);
       setMessage('数据导入成功');
     } catch (error) {
+      console.error('数据导入失败', error);
       setMessage('数据导入失败，请检查数据格式');
     }
   };

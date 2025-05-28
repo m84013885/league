@@ -67,6 +67,7 @@ interface PlayerStats {
     };
 }
 
+type ShotType = '2p' | '3p' | 'ft';
 interface GameData {
     team1: {
         name: string;
@@ -85,7 +86,12 @@ interface GameData {
     playerStats: {
         [key: string]: PlayerStats;
     };
-    scoreHistory: any[];
+    scoreHistory: {
+        player: string;
+        type: ShotType;
+        isSuccess: boolean;
+        previousStats: PlayerStats;
+    }[];
 }
 
 /**
@@ -118,15 +124,6 @@ function getPlayerNameById(id: number): string {
 function getTeamNameById(id: number): string {
     const team = TEAM_LIST.find(t => t.id === id);
     return team ? team.name : '';
-}
-
-/**
- * 获取球队的所有球员
- */
-function getTeamPlayers(teamName: string): string[] {
-    // 这里需要根据实际情况返回球队的球员列表
-    // 可以从配置或其他地方获取
-    return PLAYER_LIST.map(p => p.name);
 }
 
 /**
