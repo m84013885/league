@@ -37,7 +37,6 @@ export default function AddDataBox({
 }: AddDataBoxProps) {
     const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
     const [isPressing, setIsPressing] = useState(false);
-    const startY = useRef<number | null>(null);
     const startX = useRef<number | null>(null);
     const currentPressButton = useRef<{ type: ShotType | 'foul' | 'flagrant'; isSuccess: boolean } | null>(null);
     const [drawerTranslate, setDrawerTranslate] = useState(0);
@@ -86,22 +85,9 @@ export default function AddDataBox({
     };
 
     const handleTouchStart = (e: React.TouchEvent, type: ShotType | 'foul' | 'flagrant', isSuccess: boolean) => {
-        startY.current = e.touches[0].clientY;
-        currentPressButton.current = { type, isSuccess } as { type: ShotType | 'foul' | 'flagrant'; isSuccess: boolean };
+        currentPressButton.current = { type, isSuccess };
         const timer = setTimeout(() => {
-            setIsPressing(true);
-        }, 500); // 500ms长按阈值
-        setPressTimer(timer);
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isPressing || !startY.current || !currentPressButton.current) return;
-
-        const currentY = e.touches[0].clientY;
-        const diff = currentY - startY.current;
-
-        if (diff > 50) { // 下滑50px触发删除
-            if (currentPressButton.current.type === 'foul' || currentPressButton.current.type === 'flagrant') {
+            if (currentPressButton.current?.type === 'foul' || currentPressButton.current?.type === 'flagrant') {
                 onFoulDelete?.(currentPressButton.current.type === 'flagrant');
             } else {
                 onDeleteLastScore?.(
@@ -109,15 +95,25 @@ export default function AddDataBox({
                     currentPressButton.current.isSuccess
                 );
             }
-            setIsPressing(false);
-            if (pressTimer) clearTimeout(pressTimer);
+            setIsPressing(true);
+        }, 800); // 增加长按时间到800ms，使操作更加明确
+        setPressTimer(timer);
+    };
+
+    const handleTouchMove = () => {
+        // 如果手指移动，取消长按
+        if (pressTimer) {
+            clearTimeout(pressTimer);
+            setPressTimer(null);
         }
     };
 
     const handleTouchEnd = () => {
-        if (pressTimer) clearTimeout(pressTimer);
+        if (pressTimer) {
+            clearTimeout(pressTimer);
+            setPressTimer(null);
+        }
         setIsPressing(false);
-        startY.current = null;
         currentPressButton.current = null;
     };
 
@@ -267,7 +263,7 @@ export default function AddDataBox({
                     {/* 长按提示 */}
                     <div className="text-center mt-4 mb-safe pb-12 text-sm text-gray-500 select-none bg-white/50 
                         backdrop-blur-sm py-4 rounded-xl">
-                        长按按钮并下滑可删除对应类型的最后一次记录
+                        长按按钮可删除对应类型的最后一次记录
                         <br />
                         向左滑动可关闭面板
                     </div>
