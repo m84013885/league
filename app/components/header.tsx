@@ -226,40 +226,44 @@ export default function Header({
                     onClick={() => setHeaderVisible(false)}
                 />
             )}
-            <header className={`fixed top-0 left-0 right-0 flex flex-col sm:flex-row items-center justify-center gap-6 p-6 
+            <header className={`fixed top-0 left-0 right-0 flex flex-col items-center justify-center p-3 sm:p-6 
                 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-lg z-10 transition-all duration-300 
                 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto mt-14">
-                        <input
-                            type="text"
-                            value={importValue}
-                            onChange={(e) => setImportValue(e.target.value)}
-                            placeholder="粘贴比赛数据"
-                            className="w-full sm:w-72 px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 
-                                focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent 
-                                transition-all duration-200 shadow-sm placeholder:text-gray-400"
-                        />
-                        <button
-                            onClick={handleImportData}
-                            className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 
-                                rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 
-                                shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                            导入数据
-                        </button>
+                
+                <div className="w-full max-w-6xl flex flex-col items-center justify-between gap-3 sm:gap-4">
+                    {/* 导入数据部分 */}
+                    <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className="flex-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                            <input
+                                type="text"
+                                value={importValue}
+                                onChange={(e) => setImportValue(e.target.value)}
+                                placeholder="粘贴比赛数据"
+                                className="w-full sm:flex-1 px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent 
+                                    transition-all duration-200 shadow-sm placeholder:text-gray-400"
+                            />
+                            <button
+                                onClick={handleImportData}
+                                className="w-full sm:w-auto px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 
+                                    rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 
+                                    shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                导入数据
+                            </button>
+                        </div>
                     </div>
-                </div>
-                {isTeamSelected && (
-                    <>
-                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+
+                    {isTeamSelected && (
+                        <div className="w-full flex flex-col gap-2">
+                            {/* 导出按钮组 */}
+                            <div className="grid grid-cols-2 gap-2">
                                 <button
                                     onClick={handleExportData}
-                                    className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
+                                    className="w-full px-4 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
                                         rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 
                                         shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                                 >
@@ -270,27 +274,31 @@ export default function Header({
                                 </button>
                                 <button
                                     onClick={handleExportExcel}
-                                    className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
+                                    className="w-full px-4 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
                                         rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 
                                         shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
-                                    下载excel表格
+                                    下载excel
                                 </button>
                             </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+
+                            {/* 清除数据按钮 */}
                             <button
                                 onClick={() => {
                                     if (confirm('清除数据前请确保保留的数据！确定要清除所有数据吗？此操作不可恢复。')) {
                                         setHeaderVisible(false);
                                         onClearData();
-                                        setMessage('所有数据已清除');
+                                        const data = onExportData();
+                                        const jsonData = JSON.parse(data);
+                                        const compressedData = compressGameData(jsonData);
+                                        copyToClipboard(compressedData);
+                                        setMessage('所有数据已清除，已复制数据');
                                     }
                                 }}
-                                className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-red-500 to-red-600 
+                                className="w-full px-4 py-2.5 text-white bg-gradient-to-r from-red-500 to-red-600 
                                     rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 
                                     shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                             >
@@ -300,8 +308,8 @@ export default function Header({
                                 清除数据
                             </button>
                         </div>
-                    </>
-                )}
+                    )}
+                </div>
             </header>
         </>
     );

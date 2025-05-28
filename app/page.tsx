@@ -518,7 +518,8 @@ export default function Home() {
           isTeamSelected={isTeamSelected}
           setMessage={setMessage}
         />
-        <div className="fixed top-4 right-4 z-20 flex gap-2">
+        <div className={`fixed top-4 right-4 z-20 flex gap-2 transition-all duration-300 transform
+          ${isHeaderVisible ? 'opacity-0 pointer-events-none translate-y-2' : 'opacity-100 translate-y-0'}`}>
           <button
             onClick={() => setIsHeaderVisible(!isHeaderVisible)}
             className={`btn-hover-effect p-3 rounded-full flex items-center justify-center w-12 h-12

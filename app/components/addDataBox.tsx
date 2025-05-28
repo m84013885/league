@@ -211,13 +211,17 @@ export default function AddDataBox({
                 id="add-data-drawer"
                 type="checkbox"
                 className="drawer-toggle"
+                onChange={(e) => {
+                    if (!e.target.checked) {
+                        onClose?.();
+                    }
+                }}
             />
             <div className="drawer-side z-50">
                 <label
                     htmlFor="add-data-drawer"
                     aria-label="close sidebar"
                     className="drawer-overlay"
-                    onClick={handleClose}
                 ></label>
                 <div 
                     className={`menu p-4 w-full max-w-md h-screen ${isTeam1 ? 'bg-yellow-50/95' : 'bg-purple-50/95'} 
@@ -229,7 +233,12 @@ export default function AddDataBox({
                 >
                     {/* 关闭按钮 */}
                     <button
-                        onClick={handleClose}
+                        onClick={() => {
+                            const drawer = document.getElementById('add-data-drawer') as HTMLInputElement;
+                            if (drawer) {
+                                drawer.checked = false;
+                            }
+                        }}
                         className={`absolute top-4 right-4 btn btn-circle btn-sm bg-white/80 hover:bg-white/90 border-none
                             shadow-lg hover:shadow-xl transition-all duration-200`}
                     >
