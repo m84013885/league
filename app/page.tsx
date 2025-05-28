@@ -604,14 +604,20 @@ export default function Home() {
               </div>
               
               {/* 队伍切换指示器 */}
-              <div className="team-indicator">
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-gray-200/50">
                 <button 
                   onClick={() => handleIndicatorClick('team1')}
-                  className={`indicator-dot ${currentTeam === 'team1' ? 'active bg-yellow-500' : 'bg-yellow-200'}`}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 transform
+                    ${currentTeam === 'team1' 
+                      ? 'bg-yellow-500 scale-125 ring-4 ring-yellow-200' 
+                      : 'bg-yellow-200 hover:bg-yellow-300'}`}
                 />
                 <button 
                   onClick={() => handleIndicatorClick('team2')}
-                  className={`indicator-dot ${currentTeam === 'team2' ? 'active bg-purple-500' : 'bg-purple-200'}`}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 transform
+                    ${currentTeam === 'team2' 
+                      ? 'bg-purple-500 scale-125 ring-4 ring-purple-200' 
+                      : 'bg-purple-200 hover:bg-purple-300'}`}
                 />
               </div>
             </div>
