@@ -1,9 +1,17 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --team1-gradient: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+  --team2-gradient: linear-gradient(135deg, #f3e8ff 0%, #c084fc 100%);
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 @theme inline {
@@ -25,10 +33,135 @@
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   color: var(--foreground);
   font-family: var(--font-noto-sans-sc), var(--font-geist-sans), 
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", 
     "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, 
     "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+/* Toast 动画 */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.3s ease-out forwards;
+}
+
+/* 球员卡片动画 */
+@keyframes cardHover {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-5px); }
+}
+
+.player-card {
+  transition: all 0.3s ease;
+}
+
+.player-card:hover {
+  animation: cardHover 0.3s ease forwards;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Glass morphism 效果 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 数字动画 */
+@keyframes scoreChange {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.score-animation {
+  animation: scoreChange 0.3s ease;
+}
+
+/* 按钮悬浮效果 */
+.btn-hover-effect {
+  transition: all 0.3s ease;
+}
+
+.btn-hover-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+}
+
+/* 队伍切换指示器 */
+.team-indicator {
+  position: fixed;
+  bottom: env(safe-area-inset-bottom, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--card-shadow);
+  z-index: 30;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: block;
+}
+
+.indicator-dot:hover {
+  opacity: 0.8;
+}
+
+.indicator-dot.active {
+  width: 24px;
+  border-radius: 12px;
+}
+
+/* 适配全面屏 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
 }

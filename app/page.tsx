@@ -81,6 +81,7 @@ export default function Home() {
   } | null>(null)
   const [playerStats, setPlayerStats] = useState<PlayerStatsMap>(initialData.playerStats)
   const [scoreHistory, setScoreHistory] = useState<ScoreHistory[]>(initialData.scoreHistory)
+  const [currentTeam, setCurrentTeam] = useState<'team1' | 'team2'>('team1');
 
   // 保存数据到localStorage的函数
   const saveGameData = () => {
@@ -137,6 +138,45 @@ export default function Home() {
   useEffect(() => {
     saveGameData();
   }, [team1, team2, playerStats, scoreHistory]);
+
+  // 使用 IntersectionObserver 监听轮播状态
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setCurrentTeam(entry.target.id as 'team1' | 'team2');
+          }
+        });
+      },
+      {
+        root: document.querySelector('.carousel'),
+        threshold: 0.5
+      }
+    );
+
+    const team1Element = document.querySelector('#team1');
+    const team2Element = document.querySelector('#team2');
+
+    if (team1Element && team2Element) {
+      observer.observe(team1Element);
+      observer.observe(team2Element);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // 处理指示器点击
+  const handleIndicatorClick = (team: 'team1' | 'team2') => {
+    const carousel = document.querySelector('.carousel');
+    if (!carousel) return;
+
+    const targetElement = document.querySelector(`#${team}`);
+    if (!targetElement) return;
+
+    targetElement.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+    setCurrentTeam(team);
+  };
 
   const handleTeamsConfirm = (selectedTeam1: { name: string, list: string[] }, selectedTeam2: { name: string, list: string[] }) => {
     // 清除之前的数据
@@ -406,7 +446,6 @@ export default function Home() {
   };
 
   const renderPlayerCard = (player: string, isTeam1: boolean) => {
-    // 如果球员被隐藏，则不渲染
     if ((isTeam1 && team1?.hiddenPlayers.includes(player)) ||
       (!isTeam1 && team2?.hiddenPlayers.includes(player))) {
       return null;
@@ -415,37 +454,61 @@ export default function Home() {
     const stats = playerStats[player];
     if (!stats) return null;
 
+    const gradientClass = isTeam1 ? 'from-yellow-100 to-yellow-300' : 'from-purple-100 to-purple-300';
+    const textColorClass = isTeam1 ? 'text-yellow-900' : 'text-purple-900';
+    const shootingPercentage = calculateShootingPercentage(stats);
+    const hasShots = stats.attempts['2p'].total > 0 || stats.attempts['3p'].total > 0;
+
     return (
       <div
         key={player}
-        className={`${isTeam1 ? 'bg-yellow-100 border-yellow-200 hover:bg-yellow-200' : 'bg-purple-100 border-purple-200 hover:bg-purple-200'} 
-        border rounded p-1.5 text-center flex flex-col justify-center gap-1 transition-colors cursor-pointer relative min-h-[4.5rem]`}
+        className={`player-card bg-gradient-to-br ${gradientClass} 
+        rounded-xl p-3 text-center flex flex-col justify-between gap-1
+        shadow-md hover:shadow-xl transition-all duration-300 relative min-h-[5.5rem]
+        border border-opacity-20 ${isTeam1 ? 'border-yellow-400' : 'border-purple-400'}`}
+        onClick={() => handlePlayerClick(player, isTeam1 ? team1!.name : team2!.name, isTeam1)}
       >
-        <div
-          className="flex flex-col items-center justify-center w-full gap-0.5 pt-0.5"
-          onClick={() => handlePlayerClick(player, isTeam1 ? team1!.name : team2!.name, isTeam1)}
-        >
-          <span className={`${isTeam1 ? 'text-yellow-800' : 'text-purple-800'} font-bold text-base truncate text-center w-[85%]`}>
+        <div className="flex flex-col items-center justify-start w-full">
+          <span className={`${textColorClass} font-bold text-lg truncate w-[90%] mb-1`}>
             {player}
           </span>
-          <div className={`${isTeam1 ? 'text-yellow-700' : 'text-purple-700'} text-base font-medium flex items-center justify-center gap-0.5`}>
+          <div className={`${textColorClass} text-xl font-semibold flex items-center justify-center gap-1 score-animation`}>
             <span>{stats.totalScore}</span>
-            <span className="text-sm opacity-60">分</span>
+            <span className="text-sm opacity-70">分</span>
           </div>
-          {(stats.attempts['2p'].total > 0 || stats.attempts['3p'].total > 0) && (
-            <div className={`${isTeam1 ? 'text-yellow-700' : 'text-purple-700'} text-base font-medium flex items-center justify-center gap-0.5`}>
-              <span>命中率:</span>
-              <span className="text-sm opacity-60">{calculateShootingPercentage(stats)}%</span>
-            </div>
-          )}
         </div>
+
+        {hasShots && (
+          <div className={`${textColorClass} text-xs font-medium flex items-center justify-center gap-0.5 mt-auto`}>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5">
+              <span className="opacity-70">命中</span>
+              <span className="font-bold tabular-nums">{shootingPercentage}%</span>
+            </div>
+          </div>
+        )}
+
+        {/* 犯规指示器 */}
+        {(stats.fouls > 0 || stats.flagrantFouls > 0) && (
+          <div className="absolute top-1 right-1 flex items-center gap-1">
+            {stats.fouls > 0 && (
+              <div className="text-xs px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700">
+                {stats.fouls}
+              </div>
+            )}
+            {stats.flagrantFouls > 0 && (
+              <div className="text-xs px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-800 font-bold">
+                {stats.flagrantFouls}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <Header
           isHeaderVisible={isHeaderVisible}
           setHeaderVisible={setIsHeaderVisible}
@@ -458,78 +521,101 @@ export default function Home() {
         <div className="fixed top-4 right-4 z-20 flex gap-2">
           <button
             onClick={() => setIsHeaderVisible(!isHeaderVisible)}
-            className="p-2.5 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 flex items-center justify-center w-10 h-10"
+            className={`btn-hover-effect p-3 rounded-full flex items-center justify-center w-12 h-12
+              ${isHeaderVisible 
+                ? 'bg-gray-800/80 text-white' 
+                : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/80'} 
+              backdrop-blur-md shadow-lg`}
             aria-label={isHeaderVisible ? '隐藏头部' : '显示头部'}
           >
             <div className={`transform transition-transform duration-300 ${isHeaderVisible ? 'rotate-180' : ''}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-gray-600">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </div>
           </button>
-          {isTeamSelected && <button
-            onClick={() => {
-              const drawer = document.getElementById('setting-drawer') as HTMLInputElement;
-              if (drawer) {
-                drawer.checked = true;
-              }
-            }}
-            className="p-2.5 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 flex items-center justify-center w-10 h-10"
-            aria-label="设置"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-gray-600">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>}
+          {isTeamSelected && (
+            <button
+              onClick={() => {
+                const drawer = document.getElementById('setting-drawer') as HTMLInputElement;
+                if (drawer) {
+                  drawer.checked = true;
+                }
+              }}
+              className="btn-hover-effect p-3 rounded-full bg-gray-100/80 hover:bg-gray-200/80 backdrop-blur-md shadow-lg 
+                flex items-center justify-center w-12 h-12 text-gray-700"
+              aria-label="设置"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          )}
         </div>
-        <main className="flex flex-col w-full h-screen pb-safe">
-          {/* 未选择时的提示 */}
+        <main className="flex flex-col w-full h-screen">
           {!isTeamSelected ? (
-            <div className="flex flex-col items-center gap-4 w-full h-full justify-center">
-              <button className="btn btn-primary text-center" onClick={() => {
-                (document.getElementById('select-team-drawer') as HTMLInputElement).checked = true;
-              }}>
-                请选择两个队伍开始对战
+            <div className="flex flex-col items-center gap-6 w-full h-full justify-center p-4">
+              <button 
+                className="btn-hover-effect btn btn-primary text-center text-lg font-semibold px-8 py-4 rounded-full shadow-lg"
+                onClick={() => {
+                  (document.getElementById('select-team-drawer') as HTMLInputElement).checked = true;
+                }}
+              >
+                选择队伍开始比赛
               </button>
             </div>
-          ) : null}
-          {/* 队伍球员名单显示区域 */}
-          {isTeamSelected ? (
-            <div className="w-full h-full">
-              <div className="carousel w-full h-full">
-                {/* 队伍一球员名单 */}
-                <div className="carousel-item w-full h-full">
-                  <div className="flex flex-col w-full h-full bg-yellow-50 p-4 pb-8">
-                    <h3 className="text-2xl font-bold text-yellow-800 mb-4 text-center">
-                      {team1?.name}
-                      <div className="text-base opacity-80 mt-1">
-                        总分：{team1?.totalScore || 0}
+          ) : (
+            <div className="w-full h-full relative">
+              <div className="carousel w-full h-full snap-x snap-mandatory">
+                {/* 队伍一 */}
+                <div id="team1" className="carousel-item w-full h-full relative snap-center">
+                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 pb-24">
+                    <div className="glass-effect rounded-2xl p-4 mb-6 text-center">
+                      <h3 className="text-3xl font-bold text-yellow-800 mb-2">
+                        {team1?.name}
+                      </h3>
+                      <div className="text-xl text-yellow-700 font-semibold">
+                        总分：<span className="score-animation">{team1?.totalScore || 0}</span>
                       </div>
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 flex-1">
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
                       {team1?.list.map(player => renderPlayerCard(player, true))}
                     </div>
                   </div>
                 </div>
 
-                {/* 队伍二球员名单 */}
-                <div className="carousel-item w-full h-full">
-                  <div className="flex flex-col w-full h-full bg-purple-50 p-4 pb-8">
-                    <h3 className="text-2xl font-bold text-purple-800 mb-4 text-center">
-                      {team2?.name}
-                      <div className="text-base opacity-80 mt-1">
-                        总分：{team2?.totalScore || 0}
+                {/* 队伍二 */}
+                <div id="team2" className="carousel-item w-full h-full relative snap-center">
+                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-purple-50 to-purple-100 p-6 pb-24">
+                    <div className="glass-effect rounded-2xl p-4 mb-6 text-center">
+                      <h3 className="text-3xl font-bold text-purple-800 mb-2">
+                        {team2?.name}
+                      </h3>
+                      <div className="text-xl text-purple-700 font-semibold">
+                        总分：<span className="score-animation">{team2?.totalScore || 0}</span>
                       </div>
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 flex-1">
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
                       {team2?.list.map(player => renderPlayerCard(player, false))}
                     </div>
                   </div>
                 </div>
               </div>
+              
+              {/* 队伍切换指示器 */}
+              <div className="team-indicator">
+                <button 
+                  onClick={() => handleIndicatorClick('team1')}
+                  className={`indicator-dot ${currentTeam === 'team1' ? 'active bg-yellow-500' : 'bg-yellow-200'}`}
+                />
+                <button 
+                  onClick={() => handleIndicatorClick('team2')}
+                  className={`indicator-dot ${currentTeam === 'team2' ? 'active bg-purple-500' : 'bg-purple-200'}`}
+                />
+              </div>
             </div>
-          ) : null}
+          )}
         </main>
       </div>
       <Toast setMessage={setMessage} message={message} />
