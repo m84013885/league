@@ -125,29 +125,38 @@ export default function AddDataBox({
         const shotStats = stats?.attempts[type] || { made: 0, total: 0 };
         return (
             <>
-                <div className="col-span-2 flex justify-between items-center mb-1">
-                    <span className="text-base font-medium">{label}</span>
-                    <span className={`text-sm ${isTeam1 ? 'text-yellow-600' : 'text-purple-600'}`}>
+                <div className="col-span-2 flex justify-between items-center mb-2">
+                    <span className="text-base font-semibold">{label}</span>
+                    <span className={`text-sm font-medium px-3 py-1 rounded-full 
+                        ${isTeam1 
+                            ? 'bg-yellow-100/80 text-yellow-800' 
+                            : 'bg-purple-100/80 text-purple-800'}`}>
                         {shotStats.made}/{shotStats.total}
                     </span>
                 </div>
                 <button
-                    className={`btn btn-success h-16 select-none ${isPressing && currentPressButton.current?.type === type && currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
+                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
+                        ${isTeam1 
+                            ? 'bg-yellow-500 hover:bg-yellow-600 border-none text-white' 
+                            : 'bg-purple-500 hover:bg-purple-600 border-none text-white'}
+                        ${isPressing && currentPressButton.current?.type === type && currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
                     onClick={() => onScoreAdd?.(type, true)}
                     onTouchStart={(e) => handleTouchStart(e, type, true)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none">命中</span>
+                    <span className="text-lg select-none font-medium">命中</span>
                 </button>
                 <button
-                    className={`btn btn-error h-16 select-none ${isPressing && currentPressButton.current?.type === type && !currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
+                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
+                        bg-gray-100 hover:bg-gray-200 border-none text-gray-700
+                        ${isPressing && currentPressButton.current?.type === type && !currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
                     onClick={() => onScoreAdd?.(type, false)}
                     onTouchStart={(e) => handleTouchStart(e, type, false)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none">不中</span>
+                    <span className="text-lg select-none font-medium">不中</span>
                 </button>
             </>
         );
@@ -156,34 +165,41 @@ export default function AddDataBox({
     const renderFoulSection = () => {
         return (
             <>
-                <div className="col-span-2 flex justify-between items-center mb-1">
-                    <span className="text-base font-medium">犯规</span>
+                <div className="col-span-2 flex justify-between items-center mb-2">
+                    <span className="text-base font-semibold">犯规</span>
                     <div className="flex gap-3">
-                        <span className={`text-sm ${isTeam1 ? 'text-yellow-600' : 'text-purple-600'}`}>
+                        <span className={`text-sm font-medium px-3 py-1 rounded-full 
+                            ${isTeam1 
+                                ? 'bg-yellow-100/80 text-yellow-800' 
+                                : 'bg-purple-100/80 text-purple-800'}`}>
                             普通：{stats?.fouls || 0}
                         </span>
-                        <span className={`text-sm ${isTeam1 ? 'text-yellow-600' : 'text-purple-600'}`}>
+                        <span className="text-sm font-medium px-3 py-1 rounded-full bg-red-100/80 text-red-800">
                             恶意：{stats?.flagrantFouls || 0}
                         </span>
                     </div>
                 </div>
                 <button
-                    className={`btn btn-warning h-16 select-none ${isPressing && currentPressButton.current?.type === 'foul' ? 'opacity-50' : ''}`}
+                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
+                        bg-amber-500 hover:bg-amber-600 border-none text-white
+                        ${isPressing && currentPressButton.current?.type === 'foul' ? 'opacity-50' : ''}`}
                     onClick={() => onFoulAdd?.(false)}
                     onTouchStart={(e) => handleTouchStart(e, 'foul', true)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none">普通犯规</span>
+                    <span className="text-lg select-none font-medium">普通犯规</span>
                 </button>
                 <button
-                    className={`btn btn-error h-16 select-none ${isPressing && currentPressButton.current?.type === 'flagrant' ? 'opacity-50' : ''}`}
+                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
+                        bg-red-500 hover:bg-red-600 border-none text-white
+                        ${isPressing && currentPressButton.current?.type === 'flagrant' ? 'opacity-50' : ''}`}
                     onClick={() => onFoulAdd?.(true)}
                     onTouchStart={(e) => handleTouchStart(e, 'flagrant', true)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none">恶意犯规</span>
+                    <span className="text-lg select-none font-medium">恶意犯规</span>
                 </button>
             </>
         );
@@ -204,7 +220,8 @@ export default function AddDataBox({
                     onClick={handleClose}
                 ></label>
                 <div 
-                    className={`menu p-4 w-full max-w-md h-screen ${isTeam1 ? 'bg-yellow-50' : 'bg-purple-50'} relative flex flex-col transition-transform duration-200`}
+                    className={`menu p-4 w-full max-w-md h-screen ${isTeam1 ? 'bg-yellow-50/95' : 'bg-purple-50/95'} 
+                        backdrop-blur-xl relative flex flex-col transition-transform duration-200`}
                     style={{ transform: `translateX(${drawerTranslate}px)` }}
                     onTouchStart={handleDrawerTouchStart}
                     onTouchMove={handleDrawerTouchMove}
@@ -213,7 +230,8 @@ export default function AddDataBox({
                     {/* 关闭按钮 */}
                     <button
                         onClick={handleClose}
-                        className={`absolute top-2 right-2 btn btn-circle btn-sm ${isTeam1 ? 'btn-warning' : 'btn-secondary'} hover:opacity-80`}
+                        className={`absolute top-4 right-4 btn btn-circle btn-sm bg-white/80 hover:bg-white/90 border-none
+                            shadow-lg hover:shadow-xl transition-all duration-200`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -221,15 +239,16 @@ export default function AddDataBox({
                     </button>
 
                     {/* 头部信息 */}
-                    <div className="text-center mb-4 mt-2">
-                        <p className={`text-lg ${isTeam1 ? 'text-yellow-700' : 'text-purple-700'} select-none flex items-center justify-center gap-2`}>
+                    <div className="text-center mb-6 mt-4">
+                        <p className={`text-xl ${isTeam1 ? 'text-yellow-800' : 'text-purple-800'} 
+                            select-none flex items-center justify-center gap-3 font-semibold`}>
                             <span>{player}</span>
-                            <span className="opacity-80">({stats?.totalScore || 0}分)</span>
+                            <span className="opacity-80 text-lg">({stats?.totalScore || 0}分)</span>
                         </p>
                     </div>
 
                     {/* 计分按钮组 */}
-                    <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-3 flex-1 overflow-y-auto px-2">
                         {renderShotTypeSection('2p', '2分球')}
                         {renderShotTypeSection('3p', '3分球')}
                         {renderShotTypeSection('ft', '罚球')}
@@ -237,7 +256,8 @@ export default function AddDataBox({
                     </div>
 
                     {/* 长按提示 */}
-                    <div className="text-center mt-2 mb-safe pb-12 text-xs text-gray-500 select-none">
+                    <div className="text-center mt-4 mb-safe pb-12 text-sm text-gray-500 select-none bg-white/50 
+                        backdrop-blur-sm py-4 rounded-xl">
                         长按按钮并下滑可删除对应类型的最后一次记录
                         <br />
                         向左滑动可关闭面板

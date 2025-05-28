@@ -92,75 +92,97 @@ export default function Header({
                 '恶意犯规': ''
             };
 
-            // 准备第一队数据
-            const team1Header = { ...headerRow, 队伍: jsonData.team1.name };
-            const team1Players = (jsonData.team1.list || []).map((playerName: string) => {
-                const stats = jsonData.playerStats[playerName] || {};
-                const attempts = stats.attempts || {};
-                return {
-                    队伍: '',
-                    球员: playerName || '未知球员',
-                    得分: stats.totalScore || 0,
-                    '2分命中率': (() => {
-                        const made = attempts['2p']?.made || 0;
-                        const total = attempts['2p']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '3分命中率': (() => {
-                        const made = attempts['3p']?.made || 0;
-                        const total = attempts['3p']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '罚球命中率': (() => {
-                        const made = attempts['ft']?.made || 0;
-                        const total = attempts['ft']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '犯规': stats.fouls || 0,
-                    '恶意犯规': stats.flagrantFouls || 0
-                };
+            const rows = [];
+
+            // 添加队伍1数据
+            rows.push({
+                队伍: jsonData.team1.name,
+                球员: '总分',
+                得分: jsonData.team1.totalScore,
+                '2分命中率': '',
+                '3分命中率': '',
+                '罚球命中率': '',
+                '犯规': '',
+                '恶意犯规': ''
             });
+
+            // 添加队伍1球员数据（按得分排序）
+            [...jsonData.team1.list]
+                .sort((a, b) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
+                .forEach(player => {
+                    const stats = jsonData.playerStats[player] || {};
+                    const attempts = stats.attempts || {};
+                    rows.push({
+                        队伍: '',
+                        球员: player || '未知球员',
+                        得分: stats.totalScore || 0,
+                        '2分命中率': (() => {
+                            const made = attempts['2p']?.made || 0;
+                            const total = attempts['2p']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '3分命中率': (() => {
+                            const made = attempts['3p']?.made || 0;
+                            const total = attempts['3p']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '罚球命中率': (() => {
+                            const made = attempts['ft']?.made || 0;
+                            const total = attempts['ft']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '犯规': stats.fouls || 0,
+                        '恶意犯规': stats.flagrantFouls || 0
+                    });
+                });
 
             // 添加空行
-            const emptyRow = { ...headerRow };
+            rows.push(headerRow);
 
-            // 准备第二队数据
-            const team2Header = { ...headerRow, 队伍: jsonData.team2.name };
-            const team2Players = (jsonData.team2.list || []).map((playerName: string) => {
-                const stats = jsonData.playerStats[playerName] || {};
-                const attempts = stats.attempts || {};
-                return {
-                    队伍: '',
-                    球员: playerName || '未知球员',
-                    得分: stats.totalScore || 0,
-                    '2分命中率': (() => {
-                        const made = attempts['2p']?.made || 0;
-                        const total = attempts['2p']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '3分命中率': (() => {
-                        const made = attempts['3p']?.made || 0;
-                        const total = attempts['3p']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '罚球命中率': (() => {
-                        const made = attempts['ft']?.made || 0;
-                        const total = attempts['ft']?.total || 0;
-                        return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
-                    })(),
-                    '犯规': stats.fouls || 0,
-                    '恶意犯规': stats.flagrantFouls || 0
-                };
+            // 添加队伍2数据
+            rows.push({
+                队伍: jsonData.team2.name,
+                球员: '总分',
+                得分: jsonData.team2.totalScore,
+                '2分命中率': '',
+                '3分命中率': '',
+                '罚球命中率': '',
+                '犯规': '',
+                '恶意犯规': ''
             });
 
+            // 添加队伍2球员数据（按得分排序）
+            [...jsonData.team2.list]
+                .sort((a, b) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
+                .forEach(player => {
+                    const stats = jsonData.playerStats[player] || {};
+                    const attempts = stats.attempts || {};
+                    rows.push({
+                        队伍: '',
+                        球员: player || '未知球员',
+                        得分: stats.totalScore || 0,
+                        '2分命中率': (() => {
+                            const made = attempts['2p']?.made || 0;
+                            const total = attempts['2p']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '3分命中率': (() => {
+                            const made = attempts['3p']?.made || 0;
+                            const total = attempts['3p']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '罚球命中率': (() => {
+                            const made = attempts['ft']?.made || 0;
+                            const total = attempts['ft']?.total || 0;
+                            return total > 0 ? `${Math.round((made / total) * 100)}%` : '0%';
+                        })(),
+                        '犯规': stats.fouls || 0,
+                        '恶意犯规': stats.flagrantFouls || 0
+                    });
+                });
+
             // 合并所有数据，按顺序排列
-            const allPlayers = [
-                team1Header,
-                ...team1Players,
-                emptyRow,
-                team2Header,
-                ...team2Players
-            ];
+            const allPlayers = rows;
 
             // 创建工作簿和工作表
             const wb = XLSX.utils.book_new();
@@ -200,11 +222,13 @@ export default function Header({
             {/* 遮罩层 */}
             {isHeaderVisible && (
                 <div
-                    className="fixed inset-0 bg-black/50 transition-opacity duration-300 z-[5]"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-[5]"
                     onClick={() => setHeaderVisible(false)}
                 />
             )}
-            <header className={`fixed top-0 left-0 right-0 flex flex-col sm:flex-row items-center justify-center gap-6 p-6 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-lg z-10 transition-all duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+            <header className={`fixed top-0 left-0 right-0 flex flex-col sm:flex-row items-center justify-center gap-6 p-6 
+                bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-lg z-10 transition-all duration-300 
+                ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                     <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto mt-14">
                         <input
@@ -212,11 +236,15 @@ export default function Header({
                             value={importValue}
                             onChange={(e) => setImportValue(e.target.value)}
                             placeholder="粘贴比赛数据"
-                            className="w-full sm:w-72 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                            className="w-full sm:w-72 px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 
+                                focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent 
+                                transition-all duration-200 shadow-sm placeholder:text-gray-400"
                         />
                         <button
                             onClick={handleImportData}
-                            className="w-full sm:w-auto px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                            className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 
+                                rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 
+                                shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -231,7 +259,9 @@ export default function Header({
                             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                                 <button
                                     onClick={handleExportData}
-                                    className="w-full sm:w-auto px-4 py-2 text-white bg-green-500 rounded-lg hover:bg-green-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                                    className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
+                                        rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 
+                                        shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -240,7 +270,9 @@ export default function Header({
                                 </button>
                                 <button
                                     onClick={handleExportExcel}
-                                    className="w-full sm:w-auto px-4 py-2 text-white bg-green-500 rounded-lg hover:bg-green-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                                    className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 
+                                        rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 
+                                        shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -258,7 +290,9 @@ export default function Header({
                                         setMessage('所有数据已清除');
                                     }
                                 }}
-                                className="w-full sm:w-auto px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                                className="w-full sm:w-auto px-5 py-2.5 text-white bg-gradient-to-r from-red-500 to-red-600 
+                                    rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 
+                                    shadow-sm hover:shadow-md flex items-center justify-center gap-2 font-medium"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />

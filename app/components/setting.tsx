@@ -29,6 +29,8 @@ interface SettingProps {
 
 export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, onTogglePlayer, playerStats }: SettingProps) {
     const [selectedTeam, setSelectedTeam] = useState<'team1' | 'team2'>('team1');
+    const [showJumpBalls, setShowJumpBalls] = useState(false);
+    const [showTeamFouls, setShowTeamFouls] = useState(false);
 
     // 计算队伍总犯规数
     const calculateTeamFouls = (teamList: string[] = []) => {
@@ -58,33 +60,36 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
 
         return (
             <div key={player}
-                className={`card bg-base-100 shadow-md mb-2 ${isHidden ? 'opacity-50' : ''}`}
+                className={`card bg-base-100/90 backdrop-blur-sm shadow-md rounded-xl transition-all duration-200
+                    ${isHidden ? 'opacity-50' : 'hover:shadow-lg'}`}
             >
-                <div className="card-body p-3">
+                <div className="card-body p-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <button
-                                className={`btn btn-xs ${isHidden ? 'btn-error' : 'btn-success'}`}
+                                className={`btn btn-xs ${isHidden 
+                                    ? 'bg-red-100 hover:bg-red-200 text-red-800 border-red-200' 
+                                    : 'bg-green-100 hover:bg-green-200 text-green-800 border-green-200'}`}
                                 onClick={() => onTogglePlayer?.(player, isTeam1)}
                             >
                                 {isHidden ? '显示' : '隐藏'}
                             </button>
-                            <span className={`text-base font-semibold ${isHidden ? 'line-through' : ''}`}>
+                            <span className={`text-base font-semibold ${isHidden ? 'line-through opacity-70' : ''}`}>
                                 {player}
                             </span>
                         </div>
-                        <div className="badge badge-lg badge-primary">
+                        <div className={`badge badge-lg ${isTeam1 ? 'bg-yellow-100 text-yellow-800' : 'bg-purple-100 text-purple-800'} font-medium`}>
                             {stats?.totalScore || 0} 分
                         </div>
                     </div>
-                    <div className="flex gap-4 mt-1">
-                        <div className="flex items-center gap-1">
+                    <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-1.5">
                             <span className="text-sm opacity-70">犯规:</span>
-                            <span className="badge badge-neutral">{stats?.fouls || 0}</span>
+                            <span className="badge bg-base-200 text-base-content font-medium">{stats?.fouls || 0}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                             <span className="text-sm opacity-70">恶犯:</span>
-                            <span className="badge badge-error">{stats?.flagrantFouls || 0}</span>
+                            <span className="badge bg-red-100 text-red-800 font-medium">{stats?.flagrantFouls || 0}</span>
                         </div>
                     </div>
                 </div>
@@ -105,93 +110,113 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
-                <div className="menu p-4 w-2/3 sm:w-2/3 md:w-1/2 h-full bg-base-200 text-base-content flex flex-col">
-                    <h2 className="text-2xl font-bold mb-3">设置</h2>
-
+                <div className="menu p-6 w-2/3 sm:w-2/3 md:w-1/2 h-full bg-base-200/95 backdrop-blur-xl text-base-content flex flex-col">
                     {/* 比分显示 */}
-                    <div className="stats shadow w-full mb-3 bg-base-100">
-                        <div className="stat p-2">
-                            <div className="stat-title text-sm">{team1?.name || '队伍1'}</div>
+                    <div className="stats shadow-lg w-full mb-4 bg-base-100/90 backdrop-blur-sm rounded-2xl">
+                        <div className="stat p-4">
+                            <div className="stat-title text-sm font-medium opacity-70">{team1?.name || '队伍1'}</div>
                             <div className="stat-value text-3xl text-primary">{team1?.totalScore || 0}</div>
                         </div>
-                        <div className="stat p-2">
-                            <div className="stat-title text-sm">{team2?.name || '队伍2'}</div>
+                        <div className="stat p-4">
+                            <div className="stat-title text-sm font-medium opacity-70">{team2?.name || '队伍2'}</div>
                             <div className="stat-value text-3xl text-secondary">{team2?.totalScore || 0}</div>
                         </div>
                     </div>
 
                     {/* 争球按钮 */}
-                    <div className="mb-3">
-                        <h3 className="text-lg font-semibold mb-2">争球机会</h3>
-                        <div className="flex gap-2 mb-2">
-                            <button
-                                className={`btn btn-sm flex-1 btn-outline`}
-                                onClick={() => onJumpBall?.(true)}
-                                disabled={!team1}
-                            >
-                                {team1?.name || '队伍1'} ({team1?.jumpBalls || 0})
-                            </button>
-                            <button
-                                className={`btn btn-sm flex-1 btn-outline`}
-                                onClick={() => onJumpBall?.(false)}
-                                disabled={!team2}
-                            >
-                                {team2?.name || '队伍2'} ({team2?.jumpBalls || 0})
+                    <div className="mb-4 card bg-base-100/90 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
+                        <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-base-200/50"
+                             onClick={() => setShowJumpBalls(!showJumpBalls)}>
+                            <h3 className="text-lg font-semibold">争球机会</h3>
+                            <button className={`btn btn-circle btn-ghost btn-sm transition-transform duration-200 
+                                ${showJumpBalls ? 'rotate-180' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </button>
                         </div>
-                        <div className="flex gap-2">
-                            <button
-                                className="btn btn-xs btn-error flex-1"
-                                onClick={() => onResetJumpBalls?.(true)}
-                                disabled={!team1 || team1.jumpBalls === 0}
-                            >
-                                重置{team1?.name || '队伍1'}
-                            </button>
-                            <button
-                                className="btn btn-xs btn-error flex-1"
-                                onClick={() => onResetJumpBalls?.(false)}
-                                disabled={!team2 || team2.jumpBalls === 0}
-                            >
-                                重置{team2?.name || '队伍2'}
-                            </button>
+                        <div className={`px-4 pb-4 transition-all duration-200 ${showJumpBalls ? 'block' : 'hidden'}`}>
+                            <div className="flex gap-3 mb-3">
+                                <button
+                                    className={`btn btn-sm flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-200`}
+                                    onClick={() => onJumpBall?.(true)}
+                                    disabled={!team1}
+                                >
+                                    {team1?.name.slice(0, 4) || '队伍1'} ({team1?.jumpBalls || 0})
+                                </button>
+                                <button
+                                    className={`btn btn-sm flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-200`}
+                                    onClick={() => onJumpBall?.(false)}
+                                    disabled={!team2}
+                                >
+                                    {team2?.name.slice(0, 4) || '队伍2'} ({team2?.jumpBalls || 0})
+                                </button>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    className="btn btn-xs btn-error flex-1 bg-opacity-80 hover:bg-opacity-100"
+                                    onClick={() => onResetJumpBalls?.(true)}
+                                    disabled={!team1 || team1.jumpBalls === 0}
+                                >
+                                    重置{team1?.name || '队伍1'}
+                                </button>
+                                <button
+                                    className="btn btn-xs btn-error flex-1 bg-opacity-80 hover:bg-opacity-100"
+                                    onClick={() => onResetJumpBalls?.(false)}
+                                    disabled={!team2 || team2.jumpBalls === 0}
+                                >
+                                    重置{team2?.name || '队伍2'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     {/* 队伍总犯规统计 */}
-                    <div className="mb-3">
-                        <h3 className="text-lg font-semibold mb-2">队伍总犯规</h3>
-                        <div className="stats shadow w-full bg-base-100">
-                            <div className="stat p-2">
-                                <div className="stat-title text-sm">{team1?.name || '队伍1'}</div>
-                                <div className="stat-value text-xl text-primary">{team1TotalFouls}</div>
-                            </div>
-                            <div className="stat p-2">
-                                <div className="stat-title text-sm">{team2?.name || '队伍2'}</div>
-                                <div className="stat-value text-xl text-secondary">{team2TotalFouls}</div>
+                    <div className="mb-4 card bg-base-100/90 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
+                        <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-base-200/50"
+                             onClick={() => setShowTeamFouls(!showTeamFouls)}>
+                            <h3 className="text-lg font-semibold">队伍总犯规</h3>
+                            <button className={`btn btn-circle btn-ghost btn-sm transition-transform duration-200 
+                                ${showTeamFouls ? 'rotate-180' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className={`transition-all duration-200 ${showTeamFouls ? 'block' : 'hidden'}`}>
+                            <div className="stats w-full">
+                                <div className="stat p-4">
+                                    <div className="stat-title text-sm font-medium opacity-70">{team1?.name || '队伍1'}</div>
+                                    <div className="stat-value text-2xl text-primary">{team1TotalFouls}</div>
+                                </div>
+                                <div className="stat p-4">
+                                    <div className="stat-title text-sm font-medium opacity-70">{team2?.name || '队伍2'}</div>
+                                    <div className="stat-value text-2xl text-secondary">{team2TotalFouls}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* 球员统计 */}
                     <div className="flex-1 flex flex-col min-h-0">
-                        <h3 className="text-lg font-semibold mb-2">球员统计</h3>
-                        <div className="tabs tabs-boxed mb-2">
+                        <h3 className="text-lg font-semibold mb-3">球员统计</h3>
+                        <div className="tabs tabs-boxed mb-3 bg-base-100/50 p-1 rounded-2xl">
                             <a
-                                className={`tab tab-sm ${selectedTeam === 'team1' ? 'tab-active' : ''}`}
+                                className={`tab flex-1 transition-all duration-200 rounded-xl ${selectedTeam === 'team1' ? 'tab-active bg-yellow-100 text-yellow-900' : ''}`}
                                 onClick={() => setSelectedTeam('team1')}
                             >
                                 {team1?.name || '队伍1'}
                             </a>
                             <a
-                                className={`tab tab-sm ${selectedTeam === 'team2' ? 'tab-active' : ''}`}
+                                className={`tab flex-1 transition-all duration-200 rounded-xl ${selectedTeam === 'team2' ? 'tab-active bg-purple-100 text-purple-900' : ''}`}
                                 onClick={() => setSelectedTeam('team2')}
                             >
                                 {team2?.name || '队伍2'}
                             </a>
                         </div>
 
-                        <div className="overflow-y-auto flex-1 pb-safe">
-                            <div className="space-y-2 pb-6">
+                        <div className="overflow-y-auto flex-1 pb-safe [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:none]">
+                            <div className="space-y-3 pb-6">
                                 {getSortedPlayers(selectedTeam === 'team1' ? team1?.list : team2?.list).map(player =>
                                     renderPlayerStats(player, selectedTeam === 'team1')
                                 )}

@@ -41,25 +41,19 @@ export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
     const getButtonStyle = (team: { name: string, list: string[] }) => {
         const index = selectedTeams.findIndex(t => t.name === team.name);
         if (index === 0) {
-            // 第一队 - 浅黄色背景
-            return "btn btn-lg w-full text-lg font-semibold bg-yellow-100 border-yellow-300 text-yellow-800 hover:bg-yellow-200";
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+                bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 \
+                hover:from-yellow-200 hover:to-yellow-300 shadow-md hover:shadow-lg \
+                border border-yellow-300/50";
         } else if (index === 1) {
-            // 第二队 - 浅紫色背景
-            return "btn btn-lg w-full text-lg font-semibold bg-purple-100 border-purple-300 text-purple-800 hover:bg-purple-200";
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+                bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 \
+                hover:from-purple-200 hover:to-purple-300 shadow-md hover:shadow-lg \
+                border border-purple-300/50";
         } else {
-            // 未选择
-            return "btn btn-outline btn-lg w-full text-lg font-semibold hover:btn-primary transition-all duration-200";
-        }
-    };
-
-    const getTeamLabel = (team: { name: string, list: string[] }) => {
-        const index = selectedTeams.findIndex(t => t.name === team.name);
-        if (index === 0) {
-            return `${team.name}`;
-        } else if (index === 1) {
-            return `${team.name}`;
-        } else {
-            return team.name;
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+                bg-white/80 hover:bg-white/90 text-gray-700 shadow-md hover:shadow-lg \
+                border border-gray-200/50 hover:border-blue-200/50 hover:text-blue-600";
         }
     };
 
@@ -76,13 +70,18 @@ export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
-                <div className="menu p-6 w-2/3 sm:w-2/3 md:w-1/2 min-h-full bg-base-200 text-base-content">
-                    <h2 className="text-2xl font-bold mb-4 text-center">选择对战队伍</h2>
-                    <p className="text-center text-sm text-gray-600 mb-6">
-                        请选择两个队伍进行对战 ({selectedTeams.length}/2)
-                    </p>
+                <div className="menu p-8 w-2/3 sm:w-2/3 md:w-1/2 min-h-full bg-base-200/95 backdrop-blur-xl text-base-content">
+                    <div className="flex flex-col items-center mb-8">
+                        <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 
+                            text-transparent bg-clip-text">选择对战队伍</h2>
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-base-100/50 backdrop-blur-sm">
+                            <span className="text-sm text-gray-600">已选择</span>
+                            <span className="text-lg font-semibold text-blue-600">{selectedTeams.length}</span>
+                            <span className="text-sm text-gray-600">/ 2</span>
+                        </div>
+                    </div>
 
-                    <div className="space-y-4 mb-6">
+                    <div className="grid grid-cols-1 gap-4 mb-8">
                         {CURRENT_TEAM_LIST.map((team) => (
                             <button
                                 key={team.name}
@@ -90,35 +89,43 @@ export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
                                 onClick={() => handleTeamSelect(team)}
                                 disabled={selectedTeams.length === 2 && !selectedTeams.some(t => t.name === team.name)}
                             >
-                                {getTeamLabel(team)}
+                                {team.name}
                             </button>
                         ))}
                     </div>
 
                     {/* 选择状态显示 */}
                     {selectedTeams.length > 0 && (
-                        <div className="mb-6 p-4 bg-base-100 rounded-lg">
-                            <h3 className="font-semibold mb-2">已选择队伍：</h3>
-                            {selectedTeams[0] && (
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-4 h-4 bg-yellow-300 rounded"></div>
-                                    <span>队伍一：{selectedTeams[0].name}</span>
-                                </div>
-                            )}
-                            {selectedTeams[1] && (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 bg-purple-300 rounded"></div>
-                                    <span>队伍二：{selectedTeams[1].name}</span>
-                                </div>
-                            )}
+                        <div className="mb-8 p-6 bg-base-100/70 backdrop-blur-sm rounded-2xl shadow-lg 
+                            border border-white/20">
+                            <h3 className="font-semibold mb-4 text-gray-700">已选择队伍</h3>
+                            <div className="space-y-3">
+                                {selectedTeams[0] && (
+                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-yellow-50/50 
+                                        border border-yellow-200/50">
+                                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
+                                        <span className="font-medium text-yellow-800">队伍一：{selectedTeams[0].name}</span>
+                                    </div>
+                                )}
+                                {selectedTeams[1] && (
+                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50/50 
+                                        border border-purple-200/50">
+                                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-400 to-purple-500"></div>
+                                        <span className="font-medium text-purple-800">队伍二：{selectedTeams[1].name}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {/* 确定按钮 */}
                     <button
-                        className={`btn btn-primary btn-lg w-full ${selectedTeams.length === 2
-                            ? 'btn-primary'
-                            : 'btn-disabled'
+                        className={`w-full px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-300
+                            ${selectedTeams.length === 2
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 \
+                                    text-white shadow-lg hover:shadow-xl \
+                                    transform hover:-translate-y-0.5'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
                         onClick={handleConfirm}
                         disabled={selectedTeams.length !== 2}
