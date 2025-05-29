@@ -418,7 +418,7 @@ export default function Home() {
     setScoreHistory(history => {
       const newHistory = [...history, {
         player,
-        type: isFlagrant ? 'flagrant' : 'foul',
+        type: (isFlagrant ? 'flagrant' : 'foul') as ShotType,
         isSuccess: false,
         isTeam1: team1?.list.includes(player) ?? false,
         previousStats: { ...currentStats }
