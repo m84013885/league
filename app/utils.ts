@@ -135,33 +135,37 @@ export function compressGameData(data: GameData): string {
     const team1Id = getTeamIdByName(data.team1.name);
     const team2Id = getTeamIdByName(data.team2.name);
     
-    // 基础格式：?play=team1IdVteam2Id
-    let result = `?play=${team1Id}v${team2Id}`;
+    // 基础格式：t1Id-t2Id
+    let result = `${team1Id}-${team2Id}`;
     
-    // 添加争球数据
-    result += `&jump=${data.team1.jumpBalls},${data.team2.jumpBalls}`;
+    // 添加争球数据（如果有）
+    if (data.team1.jumpBalls > 0 || data.team2.jumpBalls > 0) {
+        result += `_j${data.team1.jumpBalls}${data.team2.jumpBalls}`;
+    }
 
     // 添加球员列表数据
     const team1PlayerIds = data.team1.list.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     const team2PlayerIds = data.team2.list.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
-    result += `&t1=${team1PlayerIds.join(',')}&t2=${team2PlayerIds.join(',')}`;
+    result += `_${team1PlayerIds.join('')}_${team2PlayerIds.join('')}`;
 
-    // 添加隐藏球员数据
+    // 添加隐藏球员数据（如果有）
     const team1HiddenIds = data.team1.hiddenPlayers.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     const team2HiddenIds = data.team2.hiddenPlayers.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     if (team1HiddenIds.length > 0 || team2HiddenIds.length > 0) {
-        result += `&h1=${team1HiddenIds.join(',')}&h2=${team2HiddenIds.join(',')}`;
+        result += `_h${team1HiddenIds.join('')}${team2HiddenIds.join('')}`;
     }
 
-    // 添加球员数据
+    // 添加球员数据（只添加有得分或犯规的球员）
     const playerData: string[] = [];
-    
-    // 处理所有球员的数据
     Object.entries(data.playerStats).forEach(([playerName, stats]) => {
         const playerId = getPlayerIdByName(playerName);
         if (playerId === -1) return;
 
-        // 格式：playerId=2p命中|2p未中|3p命中|3p未中|罚球命中|罚球未中|普通犯规|恶意犯规
+        // 只有当球员有数据时才添加
+        const hasData = stats.totalScore > 0 || stats.fouls > 0 || stats.flagrantFouls > 0;
+        if (!hasData) return;
+
+        // 格式：playerId:2p命中2p未中3p命中3p未中罚球命中罚球未中普通犯规恶意犯规
         const playerStats = [
             stats.attempts['2p'].made,
             stats.attempts['2p'].total - stats.attempts['2p'].made,
@@ -171,20 +175,46 @@ export function compressGameData(data: GameData): string {
             stats.attempts['ft'].total - stats.attempts['ft'].made,
             stats.fouls,
             stats.flagrantFouls
-        ].join('|');
+        ].join('');
 
-        if (playerStats !== '0|0|0|0|0|0|0|0') {
-            playerData.push(`p${playerId}=${playerStats}`);
+        if (playerStats !== '00000000') {
+            playerData.push(`${playerId}${playerStats}`);
         }
     });
 
-    // 添加球员数据到结果字符串
+    // 添加球员数据到结果字符串（如果有）
     if (playerData.length > 0) {
-        result += '&' + playerData.join('&');
+        result += `_p${playerData.join('')}`;
     }
 
-    // Base64编码
-    return btoa(result);
+    // 添加历史记录数据（最新的10条）
+    const recentHistory = data.scoreHistory.slice(-10);
+    if (recentHistory.length > 0) {
+        const historyData = recentHistory.map(record => {
+            const playerId = getPlayerIdByName(record.player);
+            if (playerId === -1) return null;
+
+            // 动作类型编码（更短的编码）：
+            // a: 2分命中, b: 2分不中
+            // c: 3分命中, d: 3分不中
+            // e: 罚球命中, f: 罚球不中
+            // g: 普通犯规, h: 恶意犯规
+            let actionCode = '';
+            if (record.type === '2p') actionCode = record.isSuccess ? 'a' : 'b';
+            else if (record.type === '3p') actionCode = record.isSuccess ? 'c' : 'd';
+            else if (record.type === 'ft') actionCode = record.isSuccess ? 'e' : 'f';
+            else if (record.type === 'foul') actionCode = 'g';
+            else if (record.type === 'flagrant') actionCode = 'h';
+
+            return `${record.isTeam1 ? '1' : '2'}${playerId}${actionCode}`;
+        }).filter(Boolean).join('');
+
+        if (historyData) {
+            result += `_l${historyData}`;
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -192,58 +222,54 @@ export function compressGameData(data: GameData): string {
  */
 export function decompressGameData(compressed: string): GameData | null {
     try {
-        // Base64解码
-        const decoded = atob(compressed);
-        if (!decoded.startsWith('?play=')) return null;
-
-        // 解析基本信息
-        const params = new URLSearchParams(decoded);
+        const parts = compressed.split('_');
         
         // 解析队伍ID
-        const [team1Id, team2Id] = params.get('play')!.split('v').map(Number);
+        const [team1Id, team2Id] = parts[0].split('-').map(Number);
         const team1Name = getTeamNameById(team1Id);
         const team2Name = getTeamNameById(team2Id);
         
         if (!team1Name || !team2Name) return null;
 
+        let currentIndex = 1;
+        let team1JumpBalls = 0;
+        let team2JumpBalls = 0;
+        let team1Players: string[] = [];
+        let team2Players: string[] = [];
+        let team1Hidden: string[] = [];
+        let team2Hidden: string[] = [];
+        const playerStats: {[key: string]: PlayerStats} = {};
+        const scoreHistory: ScoreHistory[] = [];
+
         // 解析争球数据
-        const [team1JumpBalls, team2JumpBalls] = (params.get('jump') || '0,0').split(',').map(Number);
+        if (parts[currentIndex]?.startsWith('j')) {
+            const jumpData = parts[currentIndex].slice(1);
+            team1JumpBalls = parseInt(jumpData[0]);
+            team2JumpBalls = parseInt(jumpData[1]);
+            currentIndex++;
+        }
 
         // 解析球员列表
-        const team1PlayerIds = (params.get('t1') || '').split(',').filter(Boolean).map(Number);
-        const team2PlayerIds = (params.get('t2') || '').split(',').filter(Boolean).map(Number);
-        const team1Players = team1PlayerIds.map(id => getPlayerNameById(id)).filter(Boolean);
-        const team2Players = team2PlayerIds.map(id => getPlayerNameById(id)).filter(Boolean);
+        const team1Ids = parts[currentIndex].match(/.{1,2}/g) || [];
+        team1Players = team1Ids.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+        currentIndex++;
+
+        const team2Ids = parts[currentIndex].match(/.{1,2}/g) || [];
+        team2Players = team2Ids.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+        currentIndex++;
 
         // 解析隐藏球员列表
-        const team1HiddenIds = (params.get('h1') || '').split(',').filter(Boolean).map(Number);
-        const team2HiddenIds = (params.get('h2') || '').split(',').filter(Boolean).map(Number);
-        const team1Hidden = team1HiddenIds.map(id => getPlayerNameById(id)).filter(Boolean);
-        const team2Hidden = team2HiddenIds.map(id => getPlayerNameById(id)).filter(Boolean);
-
-        // 初始化返回数据
-        const gameData: GameData = {
-            team1: {
-                name: team1Name,
-                list: team1Players,
-                totalScore: 0,
-                jumpBalls: team1JumpBalls,
-                hiddenPlayers: team1Hidden
-            },
-            team2: {
-                name: team2Name,
-                list: team2Players,
-                totalScore: 0,
-                jumpBalls: team2JumpBalls,
-                hiddenPlayers: team2Hidden
-            },
-            playerStats: {},
-            scoreHistory: []
-        };
+        if (parts[currentIndex]?.startsWith('h')) {
+            const hiddenData = parts[currentIndex].slice(1);
+            const hiddenIds = hiddenData.match(/.{1,2}/g) || [];
+            team1Hidden = hiddenIds.slice(0, hiddenIds.length/2).map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+            team2Hidden = hiddenIds.slice(hiddenIds.length/2).map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+            currentIndex++;
+        }
 
         // 初始化所有球员的统计数据
         [...team1Players, ...team2Players].forEach(player => {
-            gameData.playerStats[player] = {
+            playerStats[player] = {
                 totalScore: 0,
                 fouls: 0,
                 flagrantFouls: 0,
@@ -256,33 +282,88 @@ export function decompressGameData(compressed: string): GameData | null {
         });
 
         // 解析球员数据
-        for (const [key, value] of params.entries()) {
-            if (key.startsWith('p')) {
-                const playerId = parseInt(key.slice(1));
+        if (parts[currentIndex]?.startsWith('p')) {
+            const playerData = parts[currentIndex].slice(1);
+            const playerChunks = playerData.match(/.{10}/g) || [];
+            playerChunks.forEach(chunk => {
+                const playerId = parseInt(chunk.slice(0, 2));
+                const playerName = getPlayerNameById(playerId);
+                if (!playerName) return;
+
+                const stats = chunk.slice(2).split('').map(Number);
+                playerStats[playerName] = {
+                    totalScore: stats[0] * 2 + stats[2] * 3 + stats[4],
+                    fouls: stats[6],
+                    flagrantFouls: stats[7],
+                    attempts: {
+                        '2p': { made: stats[0], total: stats[0] + stats[1] },
+                        '3p': { made: stats[2], total: stats[2] + stats[3] },
+                        'ft': { made: stats[4], total: stats[4] + stats[5] }
+                    }
+                };
+            });
+            currentIndex++;
+        }
+
+        // 解析历史记录数据
+        if (parts[currentIndex]?.startsWith('l')) {
+            const historyData = parts[currentIndex].slice(1);
+            // 每个记录固定4个字符：队伍(1) + 球员ID(2) + 动作代码(1)
+            for (let i = 0; i < historyData.length; i += 4) {
+                const record = historyData.slice(i, i + 4);
+                const teamFlag = record[0];
+                const playerId = parseInt(record.slice(1, 3));
+                const actionCode = record[3];
                 const playerName = getPlayerNameById(playerId);
                 if (!playerName) continue;
 
-                const [made2p, missed2p, made3p, missed3p, madeFt, missedFt, fouls, flagrantFouls] = 
-                    value.split('|').map(Number);
+                const isTeam1 = teamFlag === '1';
+                let type: ShotType | 'foul' | 'flagrant';
+                let isSuccess = false;
 
-                gameData.playerStats[playerName] = {
-                    totalScore: made2p * 2 + made3p * 3 + madeFt,
-                    fouls,
-                    flagrantFouls,
-                    attempts: {
-                        '2p': { made: made2p, total: made2p + missed2p },
-                        '3p': { made: made3p, total: made3p + missed3p },
-                        'ft': { made: madeFt, total: madeFt + missedFt }
-                    }
-                };
+                switch (actionCode) {
+                    case 'a': type = '2p'; isSuccess = true; break;
+                    case 'b': type = '2p'; isSuccess = false; break;
+                    case 'c': type = '3p'; isSuccess = true; break;
+                    case 'd': type = '3p'; isSuccess = false; break;
+                    case 'e': type = 'ft'; isSuccess = true; break;
+                    case 'f': type = 'ft'; isSuccess = false; break;
+                    case 'g': type = 'foul'; break;
+                    case 'h': type = 'flagrant'; break;
+                    default: continue;
+                }
+
+                scoreHistory.push({
+                    player: playerName,
+                    type,
+                    isSuccess,
+                    isTeam1,
+                    previousStats: { ...playerStats[playerName] }
+                });
             }
         }
 
-        // 计算队伍总分
-        gameData.team1!.totalScore = gameData.team1!.list.reduce((total, player) => 
-            total + (gameData.playerStats[player]?.totalScore || 0), 0);
-        gameData.team2!.totalScore = gameData.team2!.list.reduce((total, player) => 
-            total + (gameData.playerStats[player]?.totalScore || 0), 0);
+        // 构建返回数据
+        const gameData: GameData = {
+            team1: {
+                name: team1Name,
+                list: team1Players,
+                totalScore: team1Players.reduce((total, player) => 
+                    total + (playerStats[player]?.totalScore || 0), 0),
+                jumpBalls: team1JumpBalls,
+                hiddenPlayers: team1Hidden
+            },
+            team2: {
+                name: team2Name,
+                list: team2Players,
+                totalScore: team2Players.reduce((total, player) => 
+                    total + (playerStats[player]?.totalScore || 0), 0),
+                jumpBalls: team2JumpBalls,
+                hiddenPlayers: team2Hidden
+            },
+            playerStats,
+            scoreHistory
+        };
 
         return gameData;
     } catch (error) {

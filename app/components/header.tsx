@@ -29,7 +29,16 @@ export default function Header({
             // 尝试解析为压缩格式
             const decompressedData = decompressGameData(importValue.trim());
             if (decompressedData) {
-                onImportData(JSON.stringify(decompressedData));
+                // 确保历史记录被正确保留
+                const existingData = JSON.parse(onExportData());
+                const mergedData = {
+                    ...decompressedData,
+                    scoreHistory: [
+                        ...(existingData.scoreHistory || []),
+                        ...(decompressedData.scoreHistory || [])
+                    ]
+                };
+                onImportData(JSON.stringify(mergedData));
                 setImportValue('');
                 setMessage('数据导入成功');
                 setHeaderVisible(false);
@@ -39,7 +48,16 @@ export default function Header({
             // 如果不是压缩格式，尝试解析为JSON
             const jsonData = JSON.parse(importValue);
             if (jsonData && jsonData.team1 && jsonData.team2) {
-                onImportData(importValue);
+                // 确保历史记录被正确保留
+                const existingData = JSON.parse(onExportData());
+                const mergedData = {
+                    ...jsonData,
+                    scoreHistory: [
+                        ...(existingData.scoreHistory || []),
+                        ...(jsonData.scoreHistory || [])
+                    ]
+                };
+                onImportData(JSON.stringify(mergedData));
                 setImportValue('');
                 setMessage('数据导入成功');
                 return;
@@ -56,7 +74,12 @@ export default function Header({
         try {
             const data = onExportData();
             const jsonData = JSON.parse(data);
-            const compressedData = compressGameData(jsonData);
+            
+            // 确保导出时包含完整的历史记录
+            const compressedData = compressGameData({
+                ...jsonData,
+                scoreHistory: jsonData.scoreHistory || []
+            });
 
             if (await copyToClipboard(compressedData)) {
                 setMessage('数据已复制到剪贴板');

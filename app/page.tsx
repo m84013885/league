@@ -7,6 +7,7 @@ import SelectTeam from "@/app/components/selectTeam";
 import Header from "@/app/components/header";
 import AddDataBox from "@/app/components/addDataBox";
 import Setting from "@/app/components/setting";
+import History from '@/app/components/history';
 
 interface PlayerStats {
   totalScore: number;
@@ -29,6 +30,7 @@ interface ScoreHistory {
   player: string;
   type: ShotType;
   isSuccess: boolean;
+  isTeam1: boolean;
   previousStats: PlayerStats;
 }
 
@@ -129,7 +131,7 @@ export default function Home() {
       team1,
       team2,
       playerStats,
-      scoreHistory
+      scoreHistory  // 导出完整的历史记录
     };
     return JSON.stringify(gameData, null, 2);
   };
@@ -231,17 +233,10 @@ export default function Home() {
     if (!selectedPlayer) return;
 
     const scoreToAdd = isSuccess ? (type === '2p' ? 2 : type === '3p' ? 3 : 1) : 0;
+    const currentStats = playerStats[selectedPlayer.name];
 
     setPlayerStats(prev => {
       const playerData = prev[selectedPlayer.name];
-      // 保存当前状态到历史记录
-      setScoreHistory(history => [...history, {
-        player: selectedPlayer.name,
-        type,
-        isSuccess,
-        previousStats: { ...playerData }
-      }]);
-
       const newPlayerStats = {
         ...prev,
         [selectedPlayer.name]: {
@@ -275,6 +270,18 @@ export default function Home() {
       }
 
       return newPlayerStats;
+    });
+
+    // 保存当前状态到历史记录
+    setScoreHistory(history => {
+      const newHistory = [...history, {
+        player: selectedPlayer.name,
+        type,
+        isSuccess,
+        isTeam1: selectedPlayer.isTeam1,
+        previousStats: { ...currentStats }
+      }];
+      return newHistory;
     });
 
     const actionText = `${selectedPlayer.name} ${type === '2p' ? '2分球' : type === '3p' ? '3分球' : '罚球'}${isSuccess ? '命中' : '不中'}`;
@@ -393,6 +400,8 @@ export default function Home() {
   };
 
   const handleFoulAdd = (player: string, isFlagrant: boolean) => {
+    const currentStats = playerStats[player];
+
     setPlayerStats(prev => {
       const playerData = prev[player];
       return {
@@ -404,6 +413,19 @@ export default function Home() {
         }
       };
     });
+
+    // 添加犯规历史记录
+    setScoreHistory(history => {
+      const newHistory = [...history, {
+        player,
+        type: isFlagrant ? 'flagrant' : 'foul',
+        isSuccess: false,
+        isTeam1: team1?.list.includes(player) ?? false,
+        previousStats: { ...currentStats }
+      }];
+      return newHistory;
+    });
+
     setMessage(`${player} ${isFlagrant ? '恶意犯规' : '犯规'}`);
   };
 
@@ -536,22 +558,40 @@ export default function Home() {
             </div>
           </button>
           {isTeamSelected && (
-            <button
-              onClick={() => {
-                const drawer = document.getElementById('setting-drawer') as HTMLInputElement;
-                if (drawer) {
-                  drawer.checked = true;
-                }
-              }}
-              className="btn-hover-effect p-3 rounded-full bg-gray-100/80 hover:bg-gray-200/80 backdrop-blur-md shadow-lg 
-                flex items-center justify-center w-12 h-12 text-gray-700"
-              aria-label="设置"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => {
+                  const drawer = document.getElementById('history-drawer') as HTMLInputElement;
+                  if (drawer) {
+                    drawer.checked = true;
+                  }
+                }}
+                className="btn-hover-effect p-3 rounded-full bg-gray-100/80 hover:bg-gray-200/80 backdrop-blur-md shadow-lg 
+                  flex items-center justify-center w-12 h-12 text-gray-700"
+                aria-label="历史记录"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <path d="M12 8v4l3 3" />
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  const drawer = document.getElementById('setting-drawer') as HTMLInputElement;
+                  if (drawer) {
+                    drawer.checked = true;
+                  }
+                }}
+                className="btn-hover-effect p-3 rounded-full bg-gray-100/80 hover:bg-gray-200/80 backdrop-blur-md shadow-lg 
+                  flex items-center justify-center w-12 h-12 text-gray-700"
+                aria-label="设置"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
         <main className="flex flex-col w-full h-screen">
@@ -634,6 +674,11 @@ export default function Home() {
         onResetJumpBalls={handleResetJumpBalls}
         playerStats={playerStats}
         onTogglePlayer={handleTogglePlayer}
+      />
+      <History 
+        scoreHistory={scoreHistory} 
+        team1Name={team1?.name}
+        team2Name={team2?.name}
       />
       <AddDataBox
         player={selectedPlayer?.name}
