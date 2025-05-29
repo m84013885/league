@@ -55,6 +55,7 @@ function fallbackCopyTextToClipboard(text: string): boolean {
 }
 
 import { PLAYER_LIST, TEAM_LIST } from './config';
+import { ShotType, ScoreHistory } from './types';
 
 interface PlayerStats {
     totalScore: number;
@@ -67,7 +68,6 @@ interface PlayerStats {
     };
 }
 
-type ShotType = '2p' | '3p' | 'ft';
 interface GameData {
     team1: {
         name: string;
@@ -86,12 +86,7 @@ interface GameData {
     playerStats: {
         [key: string]: PlayerStats;
     };
-    scoreHistory: {
-        player: string;
-        type: ShotType;
-        isSuccess: boolean;
-        previousStats: PlayerStats;
-    }[];
+    scoreHistory: ScoreHistory[];
 }
 
 /**

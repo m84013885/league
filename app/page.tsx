@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 // 组件
 import Toast from "@/app/components/toast";
 import SelectTeam from "@/app/components/selectTeam";
@@ -86,7 +86,7 @@ export default function Home() {
   const [currentTeam, setCurrentTeam] = useState<'team1' | 'team2'>('team1');
 
   // 保存数据到localStorage的函数
-  const saveGameData = () => {
+  const saveGameData = useCallback(() => {
     if (typeof window !== 'undefined') {
       const gameData: GameData = {
         team1,
@@ -96,7 +96,7 @@ export default function Home() {
       };
       localStorage.setItem('basketballGameData', JSON.stringify(gameData));
     }
-  };
+  }, [team1, team2, playerStats, scoreHistory]);
 
   // 清除所有数据的函数
   const clearAllData = () => {
@@ -139,7 +139,7 @@ export default function Home() {
   // 监听数据变化，自动保存到localStorage
   useEffect(() => {
     saveGameData();
-  }, [team1, team2, playerStats, scoreHistory]);
+  }, [team1, team2, playerStats, scoreHistory, saveGameData]);
 
   // 使用 IntersectionObserver 监听轮播状态
   useEffect(() => {
