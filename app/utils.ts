@@ -55,7 +55,7 @@ function fallbackCopyTextToClipboard(text: string): boolean {
 }
 
 import { PLAYER_LIST, TEAM_LIST } from './config';
-import { ShotType, ScoreHistory } from './types';
+import { ShotType, ScoreHistory, StatHistory } from './types';
 
 interface PlayerStats {
     totalScore: number;
@@ -73,23 +73,6 @@ interface PlayerStats {
         turnovers: number;
         blocks: number;
     };
-}
-
-type ShotType = '2p' | '3p' | 'ft';
-
-interface ScoreHistory {
-    player: string;
-    type: ShotType | 'foul' | 'flagrant';
-    isSuccess: boolean;
-    isTeam1: boolean;
-    previousStats: PlayerStats;
-}
-
-interface StatHistory {
-    player: string;
-    type: 'rebound' | 'assist' | 'steal' | 'turnover' | 'block';
-    isTeam1: boolean;
-    previousStats: PlayerStats;
 }
 
 interface GameData {

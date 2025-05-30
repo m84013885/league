@@ -150,7 +150,7 @@ export default function Header({
             
             // 压缩球员数据
             const playerData: string[] = [];
-            players.forEach(player => {
+            players.forEach((player: string) => {
                 const stats = data.playerStats?.[player];
                 if (!stats) return;
                 
@@ -367,7 +367,7 @@ export default function Header({
             }
             
             // 初始化所有球员数据
-            players.forEach(player => {
+            players.forEach((player: string) => {
                 playerStats[player] = {
                     totalScore: 0,
                     fouls: 0,
@@ -390,7 +390,7 @@ export default function Header({
             // 解析球员数据
             if (playerData) {
                 const playerDataList = playerData.split('|');
-                playerDataList.forEach(playerDataStr => {
+                playerDataList.forEach((playerDataStr: string) => {
                     const [player, statsStr] = playerDataStr.split(':');
                     if (!player || !statsStr) return;
                     
@@ -494,7 +494,7 @@ export default function Header({
                     : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
                 // 添加总分行
-                const totalScore = players.reduce((total: number, player) => {
+                const totalScore = players.reduce((total: number, player: string) => {
                     return total + (jsonData.playerStats[player]?.totalScore || 0);
                 }, 0);
 
@@ -515,9 +515,9 @@ export default function Header({
 
                 // 添加球员数据（按得分排序）
                 players
-                    .filter(player => jsonData.playerStats[player])
-                    .sort((a, b) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
-                    .forEach(player => {
+                    .filter((player: string) => jsonData.playerStats[player])
+                    .sort((a: string, b: string) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
+                    .forEach((player: string) => {
                         const stats = jsonData.playerStats[player] || {};
                         const attempts = stats.attempts || {};
                         const playerStats = stats.stats || {};
@@ -626,8 +626,8 @@ export default function Header({
 
                 // 添加队伍1球员数据（按得分排序）
                 [...jsonData.team1.list]
-                    .sort((a, b) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
-                    .forEach(player => {
+                    .sort((a: string, b: string) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
+                    .forEach((player: string) => {
                         const stats = jsonData.playerStats[player] || {};
                         const attempts = stats.attempts || {};
                         const playerStats = stats.stats || {};
@@ -683,8 +683,8 @@ export default function Header({
 
                 // 添加队伍2球员数据（按得分排序）
                 [...jsonData.team2.list]
-                    .sort((a, b) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
-                    .forEach(player => {
+                    .sort((a: string, b: string) => (jsonData.playerStats[b]?.totalScore || 0) - (jsonData.playerStats[a]?.totalScore || 0))
+                    .forEach((player: string) => {
                         const stats = jsonData.playerStats[player] || {};
                         const attempts = stats.attempts || {};
                         const playerStats = stats.stats || {};

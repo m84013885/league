@@ -137,7 +137,7 @@ export default function Home() {
     return typeof playerStats.totalScore === 'number' &&
            typeof playerStats.fouls === 'number' &&
            typeof playerStats.flagrantFouls === 'number' &&
-           playerStats.attempts &&
+           playerStats.attempts !== undefined &&
            isValidAttempts(playerStats.attempts);
   };
 
@@ -169,7 +169,7 @@ export default function Home() {
         migratedStats[playerName] = {
           ...playerStatsData,
           // 确保包含新的统计数据字段
-          stats: (playerStatsData as Record<string, unknown>).stats as PlayerStats['stats'] || {
+          stats: playerStatsData.stats || {
             rebounds: 0,
             assists: 0,
             steals: 0,

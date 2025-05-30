@@ -111,7 +111,7 @@ export default function Other() {
     return typeof playerStats.totalScore === 'number' &&
            typeof playerStats.fouls === 'number' &&
            typeof playerStats.flagrantFouls === 'number' &&
-           playerStats.attempts &&
+           playerStats.attempts !== undefined &&
            isValidAttempts(playerStats.attempts);
   };
 
@@ -142,7 +142,7 @@ export default function Other() {
         const playerStatsData = stats as PlayerStats;
         migratedStats[playerName] = {
           ...playerStatsData,
-          stats: (playerStatsData as Record<string, unknown>).stats as PlayerStats['stats'] || {
+          stats: playerStatsData.stats || {
             rebounds: 0,
             assists: 0,
             steals: 0,
@@ -184,7 +184,7 @@ export default function Other() {
       setCustomPlayers(initialData.customPlayers);
       setTempPlayers(initialData.customPlayers);
     }
-  }, []);
+  }, [initialData.customPlayers]);
 
   // 初始化球员数据
   useEffect(() => {
