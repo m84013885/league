@@ -494,7 +494,7 @@ export default function Header({
                     : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
                 // 添加总分行
-                const totalScore = players.reduce((total, player) => {
+                const totalScore = players.reduce((total: number, player) => {
                     return total + (jsonData.playerStats[player]?.totalScore || 0);
                 }, 0);
 
