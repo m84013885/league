@@ -139,9 +139,13 @@ export default function Header({
     };
 
     // Other页面专用的压缩函数
-    const compressOtherPageData = (data: { playerStats: { [key: string]: OtherPagePlayerStats }; scoreHistory: unknown[]; statHistory: unknown[] }): string => {
+    const compressOtherPageData = (data: { playerStats: { [key: string]: OtherPagePlayerStats }; scoreHistory: unknown[]; statHistory: unknown[]; customPlayers?: string[] }): string => {
         try {
-            const players = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            // 使用自定义球员号码或默认号码
+            const players = data.customPlayers && data.customPlayers.length > 0 
+                ? data.customPlayers 
+                : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            
             let result = 'OTHER_';
             
             // 压缩球员数据
@@ -179,21 +183,35 @@ export default function Header({
                 result += playerData.join('|');
             }
             
+            // 添加自定义球员号码信息（如果不是默认的1-10）
+            const defaultPlayers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            if (data.customPlayers && JSON.stringify(data.customPlayers) !== JSON.stringify(defaultPlayers)) {
+                result += '#P:' + data.customPlayers.join(',');
+            }
+            
             // 添加历史记录压缩（只保留最近5条，使用紧凑编码）
             if (data.scoreHistory && Array.isArray(data.scoreHistory) && data.scoreHistory.length > 0) {
                 const recentHistory = data.scoreHistory.slice(-5);
-                const compressedHistory = recentHistory.map((record: { player: string; type: string; isSuccess?: boolean }) => {
-                    if (!record.player || !record.type) return null;
+                const compressedHistory = recentHistory.map((record) => {
+                    // 类型检查和转换
+                    if (typeof record !== 'object' || record === null) return null;
+                    const typedRecord = record as { player?: string; type?: string; isSuccess?: boolean };
                     
-                    // 紧凑编码：球员号(1-2位) + 动作类型(1位)
+                    if (!typedRecord.player || !typedRecord.type) return null;
+                    
+                    // 使用球员在数组中的索引而不是球员号码本身
+                    const playerIndex = players.indexOf(typedRecord.player);
+                    if (playerIndex === -1) return null;
+                    
+                    // 紧凑编码：球员索引(1位) + 动作类型(1位)
                     let actionCode = '';
-                    if (record.type === '2p') actionCode = record.isSuccess ? 'a' : 'b';
-                    else if (record.type === '3p') actionCode = record.isSuccess ? 'c' : 'd';
-                    else if (record.type === 'ft') actionCode = record.isSuccess ? 'e' : 'f';
-                    else if (record.type === 'foul') actionCode = 'g';
-                    else if (record.type === 'flagrant') actionCode = 'h';
+                    if (typedRecord.type === '2p') actionCode = typedRecord.isSuccess ? 'a' : 'b';
+                    else if (typedRecord.type === '3p') actionCode = typedRecord.isSuccess ? 'c' : 'd';
+                    else if (typedRecord.type === 'ft') actionCode = typedRecord.isSuccess ? 'e' : 'f';
+                    else if (typedRecord.type === 'foul') actionCode = 'g';
+                    else if (typedRecord.type === 'flagrant') actionCode = 'h';
                     
-                    return `${record.player}${actionCode}`;
+                    return `${playerIndex}${actionCode}`;
                 }).filter(Boolean).join('');
                 
                 if (compressedHistory) {
@@ -203,18 +221,26 @@ export default function Header({
             
             if (data.statHistory && Array.isArray(data.statHistory) && data.statHistory.length > 0) {
                 const recentHistory = data.statHistory.slice(-5);
-                const compressedHistory = recentHistory.map((record: { player: string; type: string }) => {
-                    if (!record.player || !record.type) return null;
+                const compressedHistory = recentHistory.map((record) => {
+                    // 类型检查和转换
+                    if (typeof record !== 'object' || record === null) return null;
+                    const typedRecord = record as { player?: string; type?: string };
                     
-                    // 紧凑编码：球员号(1-2位) + 统计类型(1位)
+                    if (!typedRecord.player || !typedRecord.type) return null;
+                    
+                    // 使用球员在数组中的索引而不是球员号码本身
+                    const playerIndex = players.indexOf(typedRecord.player);
+                    if (playerIndex === -1) return null;
+                    
+                    // 紧凑编码：球员索引(1位) + 统计类型(1位)
                     let statCode = '';
-                    if (record.type === 'rebound') statCode = 'r';
-                    else if (record.type === 'assist') statCode = 'a';
-                    else if (record.type === 'steal') statCode = 's';
-                    else if (record.type === 'turnover') statCode = 't';
-                    else if (record.type === 'block') statCode = 'b';
+                    if (typedRecord.type === 'rebound') statCode = 'r';
+                    else if (typedRecord.type === 'assist') statCode = 'a';
+                    else if (typedRecord.type === 'steal') statCode = 's';
+                    else if (typedRecord.type === 'turnover') statCode = 't';
+                    else if (typedRecord.type === 'block') statCode = 'b';
                     
-                    return `${record.player}${statCode}`;
+                    return `${playerIndex}${statCode}`;
                 }).filter(Boolean).join('');
                 
                 if (compressedHistory) {
@@ -230,18 +256,30 @@ export default function Header({
     };
 
     // Other页面专用的解压缩函数
-    const decompressOtherPageData = (compressed: string): { playerStats: { [key: string]: OtherPagePlayerStats }; scoreHistory: unknown[]; statHistory: unknown[] } | null => {
+    const decompressOtherPageData = (compressed: string): { playerStats: { [key: string]: OtherPagePlayerStats }; scoreHistory: unknown[]; statHistory: unknown[]; customPlayers?: string[] } | null => {
         try {
             if (!compressed.startsWith('OTHER_')) return null;
             
             const fullData = compressed.slice(6); // 移除 'OTHER_' 前缀
-            const players = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            let players = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']; // 默认球员号码
             const playerStats: { [key: string]: OtherPagePlayerStats } = {};
             
             // 分离球员数据和历史记录
             let playerData = fullData;
             const scoreHistory: unknown[] = [];
             const statHistory: unknown[] = [];
+            
+            // 提取自定义球员号码（如果有）
+            const customPlayersMatch = fullData.match(/#P:([^#]+)/);
+            if (customPlayersMatch) {
+                try {
+                    const customPlayersData = customPlayersMatch[1];
+                    players = customPlayersData.split(',');
+                    playerData = playerData.replace(/#P:[^#]+/, '');
+                } catch (e) {
+                    console.warn('解析自定义球员号码失败:', e);
+                }
+            }
             
             // 提取得分历史记录（新的紧凑格式）
             const scoreHistoryMatch = fullData.match(/#S:([^#]+)/);
@@ -250,9 +288,14 @@ export default function Header({
                     const historyData = scoreHistoryMatch[1];
                     // 解析紧凑编码的历史记录
                     for (let i = 0; i < historyData.length; i += 2) {
-                        const playerChar = historyData[i];
+                        const playerIndexChar = historyData[i];
                         const actionCode = historyData[i + 1];
-                        if (!playerChar || !actionCode) break;
+                        if (!playerIndexChar || !actionCode) break;
+                        
+                        const playerIndex = parseInt(playerIndexChar);
+                        if (playerIndex < 0 || playerIndex >= players.length) continue;
+                        
+                        const playerName = players[playerIndex];
                         
                         let type = '';
                         let isSuccess = false;
@@ -270,7 +313,7 @@ export default function Header({
                         }
                         
                         scoreHistory.push({
-                            player: playerChar,
+                            player: playerName,
                             type,
                             isSuccess,
                             isTeam1: true, // Other页面只有一个队伍
@@ -290,9 +333,14 @@ export default function Header({
                     const historyData = statHistoryMatch[1];
                     // 解析紧凑编码的历史记录
                     for (let i = 0; i < historyData.length; i += 2) {
-                        const playerChar = historyData[i];
+                        const playerIndexChar = historyData[i];
                         const statCode = historyData[i + 1];
-                        if (!playerChar || !statCode) break;
+                        if (!playerIndexChar || !statCode) break;
+                        
+                        const playerIndex = parseInt(playerIndexChar);
+                        if (playerIndex < 0 || playerIndex >= players.length) continue;
+                        
+                        const playerName = players[playerIndex];
                         
                         let type = '';
                         
@@ -306,7 +354,7 @@ export default function Header({
                         }
                         
                         statHistory.push({
-                            player: playerChar,
+                            player: playerName,
                             type,
                             isTeam1: true, // Other页面只有一个队伍
                             previousStats: {}
@@ -375,11 +423,19 @@ export default function Header({
                 });
             }
             
-            return {
+            // 返回结果，包含自定义球员号码（如果不是默认的）
+            const defaultPlayers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            const result: { playerStats: { [key: string]: OtherPagePlayerStats }; scoreHistory: unknown[]; statHistory: unknown[]; customPlayers?: string[] } = {
                 playerStats,
                 scoreHistory,
                 statHistory
             };
+            
+            if (JSON.stringify(players) !== JSON.stringify(defaultPlayers)) {
+                result.customPlayers = players;
+            }
+            
+            return result;
         } catch (error) {
             console.error('解压缩Other页面数据失败:', error);
             return null;
@@ -432,7 +488,10 @@ export default function Header({
                 }
 
                 const rows = [];
-                const players = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+                // 使用自定义球员号码或默认号码
+                const players = jsonData.customPlayers && jsonData.customPlayers.length > 0 
+                    ? jsonData.customPlayers 
+                    : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
                 // 添加总分行
                 const totalScore = players.reduce((total, player) => {

@@ -29,10 +29,19 @@ export default function Other() {
     playerStats: PlayerStatsMap;
     scoreHistory: ScoreHistory[];
     statHistory: StatHistory[];
+    customPlayers?: string[]; // 添加自定义球员号码
   }
 
-  // 10个球员的名称
-  const players = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  // 默认10个球员的名称，可以被自定义
+  const defaultPlayers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  
+  // 球员号码状态
+  const [customPlayers, setCustomPlayers] = useState<string[]>(defaultPlayers);
+  const [isEditingPlayers, setIsEditingPlayers] = useState(false);
+  const [tempPlayers, setTempPlayers] = useState<string[]>(defaultPlayers);
+
+  // 使用自定义球员号码或默认号码
+  const players = customPlayers;
 
   // 从localStorage读取数据的函数
   const loadGameData = (): GameData => {
@@ -52,7 +61,8 @@ export default function Other() {
           return {
             playerStats: migratePlayerStats(data.playerStats || {}),
             scoreHistory: data.scoreHistory || [],
-            statHistory: data.statHistory || []
+            statHistory: data.statHistory || [],
+            customPlayers: data.customPlayers || []
           };
         }
       } catch (error) {
@@ -151,7 +161,8 @@ export default function Other() {
     return {
       playerStats: {},
       scoreHistory: [],
-      statHistory: []
+      statHistory: [],
+      customPlayers: []
     };
   };
 
@@ -166,6 +177,14 @@ export default function Other() {
   const [playerStats, setPlayerStats] = useState<PlayerStatsMap>(initialData.playerStats)
   const [scoreHistory, setScoreHistory] = useState<ScoreHistory[]>(initialData.scoreHistory)
   const [statHistory, setStatHistory] = useState<StatHistory[]>(initialData.statHistory)
+
+  // 初始化自定义球员号码
+  useEffect(() => {
+    if (initialData.customPlayers && initialData.customPlayers.length > 0) {
+      setCustomPlayers(initialData.customPlayers);
+      setTempPlayers(initialData.customPlayers);
+    }
+  }, []);
 
   // 初始化球员数据
   useEffect(() => {
@@ -195,7 +214,7 @@ export default function Other() {
     if (Object.keys(initialStats).length > 0) {
       setPlayerStats(prev => ({ ...prev, ...initialStats }));
     }
-  }, []);
+  }, [players, playerStats]);
 
   // 保存数据到localStorage的函数
   const saveGameData = useCallback(() => {
@@ -203,23 +222,29 @@ export default function Other() {
       const gameData: GameData = {
         playerStats,
         scoreHistory,
-        statHistory
+        statHistory,
+        customPlayers
       };
       localStorage.setItem('otherPageGameData', JSON.stringify(gameData));
     }
-  }, [playerStats, scoreHistory, statHistory]);
+  }, [playerStats, scoreHistory, statHistory, customPlayers]);
 
   // 监听数据变化，自动保存到localStorage
   useEffect(() => {
     saveGameData();
-  }, [playerStats, scoreHistory, statHistory, saveGameData]);
+  }, [saveGameData]);
 
   // 清除所有数据的函数
   const clearAllData = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('otherPageGameData');
+      
+      // 重置球员号码到默认值
+      setCustomPlayers(defaultPlayers);
+      setTempPlayers(defaultPlayers);
+      
       const initialStats: PlayerStatsMap = {};
-      players.forEach(player => {
+      defaultPlayers.forEach(player => {
         initialStats[player] = {
           totalScore: 0,
           fouls: 0,
@@ -250,9 +275,20 @@ export default function Other() {
     try {
       const parsedData = JSON.parse(data);
       
+      // 如果导入的数据包含自定义球员号码，使用它们
+      if (parsedData.customPlayers && Array.isArray(parsedData.customPlayers) && parsedData.customPlayers.length > 0) {
+        setCustomPlayers(parsedData.customPlayers);
+        setTempPlayers(parsedData.customPlayers);
+      }
+      
+      // 使用导入数据中的球员列表或当前的球员列表
+      const playersToUse = parsedData.customPlayers && parsedData.customPlayers.length > 0 
+        ? parsedData.customPlayers 
+        : players;
+      
       // 创建完整的球员数据结构
       const completePlayerStats: PlayerStatsMap = {};
-      players.forEach(player => {
+      playersToUse.forEach((player: string) => {
         // 如果导入的数据中有该球员的数据，使用导入的数据，否则使用默认数据
         const importedPlayerData = parsedData.playerStats?.[player];
         completePlayerStats[player] = importedPlayerData ? {
@@ -302,7 +338,8 @@ export default function Other() {
     const gameData: GameData = {
       playerStats,
       scoreHistory,
-      statHistory
+      statHistory,
+      customPlayers
     };
     return JSON.stringify(gameData, null, 2);
   };
@@ -596,6 +633,81 @@ export default function Other() {
     setMessage(`删除 ${selectedPlayer.name}号 的${statLabels[type]}记录`);
   };
 
+  // 处理球员号码修改
+  const handleEditPlayers = () => {
+    setTempPlayers([...customPlayers]);
+    setIsEditingPlayers(true);
+  };
+
+  const handleSavePlayers = () => {
+    // 验证号码不能为空且不能重复
+    const filteredPlayers = tempPlayers.filter(p => p.trim() !== '');
+    const uniquePlayers = [...new Set(filteredPlayers)];
+    
+    if (uniquePlayers.length !== 10) {
+      setMessage('请确保有10个不重复的球员号码');
+      return;
+    }
+
+    // 更新球员数据，保持原有统计数据
+    const newPlayerStats: PlayerStatsMap = {};
+    uniquePlayers.forEach((newPlayer, index) => {
+      const oldPlayer = customPlayers[index];
+      if (playerStats[oldPlayer]) {
+        // 如果旧球员有数据，转移到新号码
+        newPlayerStats[newPlayer] = playerStats[oldPlayer];
+      } else {
+        // 新球员，初始化数据
+        newPlayerStats[newPlayer] = {
+          totalScore: 0,
+          fouls: 0,
+          flagrantFouls: 0,
+          attempts: {
+            '2p': { made: 0, total: 0 },
+            '3p': { made: 0, total: 0 },
+            'ft': { made: 0, total: 0 }
+          },
+          stats: {
+            rebounds: 0,
+            assists: 0,
+            steals: 0,
+            turnovers: 0,
+            blocks: 0
+          }
+        };
+      }
+    });
+
+    // 更新历史记录中的球员号码
+    const newScoreHistory = scoreHistory.map(record => {
+      const oldIndex = customPlayers.indexOf(record.player);
+      if (oldIndex !== -1 && uniquePlayers[oldIndex]) {
+        return { ...record, player: uniquePlayers[oldIndex] };
+      }
+      return record;
+    });
+
+    const newStatHistory = statHistory.map(record => {
+      const oldIndex = customPlayers.indexOf(record.player);
+      if (oldIndex !== -1 && uniquePlayers[oldIndex]) {
+        return { ...record, player: uniquePlayers[oldIndex] };
+      }
+      return record;
+    });
+
+    setCustomPlayers(uniquePlayers);
+    setPlayerStats(newPlayerStats);
+    setScoreHistory(newScoreHistory);
+    setStatHistory(newStatHistory);
+    setIsEditingPlayers(false);
+    setMessage('球员号码已更新');
+  };
+
+  const handleCancelEdit = () => {
+    setTempPlayers([...customPlayers]);
+    setIsEditingPlayers(false);
+  };
+
   const renderPlayerCard = (player: string) => {
     const stats = playerStats[player];
     if (!stats) return null;
@@ -681,7 +793,7 @@ export default function Other() {
     return players.reduce((total, player) => {
       return total + (playerStats[player]?.totalScore || 0);
     }, 0);
-  }, [playerStats]);
+  }, [players, playerStats]);
 
   return (
     <>
@@ -728,6 +840,17 @@ export default function Other() {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <path d="M12 8v4l3 3" />
                 <circle cx="12" cy="12" r="10" />
+              </svg>
+            </button>
+            <button
+              onClick={handleEditPlayers}
+              className="btn-hover-effect p-3 rounded-full bg-gray-100/80 hover:bg-gray-200/80 backdrop-blur-md shadow-lg 
+                flex items-center justify-center w-12 h-12 text-gray-700"
+              aria-label="编辑球员号码"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
           </div>
@@ -777,6 +900,56 @@ export default function Other() {
         onStatDelete={handleStatDelete}
         stats={selectedPlayer ? playerStats[selectedPlayer.name] : undefined}
       />
+
+      {/* 编辑球员号码模态框 */}
+      {isEditingPlayers && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">编辑球员号码</h3>
+              <p className="text-sm text-gray-600 mt-1">修改球员号码，确保每个号码都不重复</p>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[50vh]">
+              <div className="grid grid-cols-2 gap-3">
+                {tempPlayers.map((player, index) => (
+                  <div key={index} className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">
+                      球员 {index + 1}
+                    </label>
+                    <input
+                      type="text"
+                      value={player}
+                      onChange={(e) => {
+                        const newPlayers = [...tempPlayers];
+                        newPlayers[index] = e.target.value;
+                        setTempPlayers(newPlayers);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`球员${index + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={handleCancelEdit}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSavePlayers}
+                className="flex-1 px-4 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
