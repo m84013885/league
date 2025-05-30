@@ -40,6 +40,14 @@ body {
     "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, 
     "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  /* 禁用文本选择和复制 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* 禁用长按上下文菜单 */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Toast 动画 */

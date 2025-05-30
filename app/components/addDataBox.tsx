@@ -1,26 +1,23 @@
 "use client";
 
 import { useState, useRef } from 'react';
-
-type ShotType = '2p' | '3p' | 'ft';
+import { StatType } from '../types';
 
 interface AddDataBoxProps {
     player?: string;
     teamName?: string;
     isTeam1?: boolean;
     onClose?: () => void;
-    onScoreAdd?: (type: ShotType, isSuccess: boolean) => void;
-    onDeleteLastScore?: (type: ShotType, isSuccess: boolean) => void;
-    onFoulAdd?: (isFlagrant: boolean) => void;
-    onFoulDelete?: (isFlagrant: boolean) => void;
+    onStatAdd?: (type: StatType) => void;
+    onStatDelete?: (type: StatType) => void;
     stats?: {
-        attempts: {
-            '2p': { made: number; total: number; };
-            '3p': { made: number; total: number; };
-            'ft': { made: number; total: number; };
+        stats: {
+            rebounds: number;
+            assists: number;
+            steals: number;
+            turnovers: number;
+            blocks: number;
         };
-        fouls: number;
-        flagrantFouls: number;
         totalScore?: number;
     };
 }
@@ -29,22 +26,20 @@ export default function AddDataBox({
     player,
     isTeam1,
     onClose,
-    onScoreAdd,
-    onDeleteLastScore,
-    onFoulAdd,
-    onFoulDelete,
+    onStatAdd,
+    onStatDelete,
     stats
 }: AddDataBoxProps) {
     const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
     const [isPressing, setIsPressing] = useState(false);
     const startX = useRef<number | null>(null);
-    const currentPressButton = useRef<{ type: ShotType | 'foul' | 'flagrant'; isSuccess: boolean } | null>(null);
+    const currentPressButton = useRef<{ type: StatType } | null>(null);
     const [drawerTranslate, setDrawerTranslate] = useState(0);
     const isDrawerDragging = useRef(false);
     const hasDeletedRef = useRef(false);
 
     const handleClose = () => {
-        const drawer = document.getElementById('add-data-drawer') as HTMLInputElement;
+        const drawer = document.getElementById('add-stat-drawer') as HTMLInputElement;
         if (drawer) {
             drawer.checked = false;
         }
@@ -85,41 +80,20 @@ export default function AddDataBox({
         startX.current = null;
     };
 
-    const handleTouchStart = (e: React.TouchEvent, type: ShotType | 'foul' | 'flagrant', isSuccess: boolean) => {
+    const handleTouchStart = (e: React.TouchEvent, type: StatType) => {
         hasDeletedRef.current = false;
-        currentPressButton.current = { type, isSuccess };
+        currentPressButton.current = { type };
 
         // 检查是否有可删除的记录
-        if (type === 'foul' || type === 'flagrant') {
-            // 检查犯规记录
-            const foulsCount = type === 'foul' ? stats?.fouls : stats?.flagrantFouls;
-            if (!foulsCount || foulsCount <= 0) {
-                return; // 如果没有犯规记录，不启动长按计时器
-            }
-        } else {
-            // 检查投篮记录
-            const shotStats = stats?.attempts[type as ShotType];
-            if (!shotStats) return;
-
-            if (isSuccess && shotStats.made <= 0) {
-                return; // 如果是删除命中但没有命中记录
-            }
-            if (!isSuccess && (shotStats.total - shotStats.made) <= 0) {
-                return; // 如果是删除不中但没有不中记录
-            }
+        const statValue = getStatValue(type);
+        if (!statValue || statValue <= 0) {
+            return; // 如果没有记录，不启动长按计时器
         }
 
         const timer = setTimeout(() => {
             if (!currentPressButton.current) return;
             
-            if (currentPressButton.current.type === 'foul' || currentPressButton.current.type === 'flagrant') {
-                onFoulDelete?.(currentPressButton.current.type === 'flagrant');
-            } else {
-                onDeleteLastScore?.(
-                    currentPressButton.current.type as ShotType,
-                    currentPressButton.current.isSuccess
-                );
-            }
+            onStatDelete?.(currentPressButton.current.type);
             hasDeletedRef.current = true;
             setIsPressing(true);
         }, 800);
@@ -153,94 +127,75 @@ export default function AddDataBox({
         callback?.();
     };
 
-    const renderShotTypeSection = (type: ShotType, label: string) => {
-        const shotStats = stats?.attempts[type] || { made: 0, total: 0 };
+    const getStatValue = (type: StatType): number => {
+        if (!stats?.stats) return 0;
+        switch (type) {
+            case 'rebound': return stats.stats.rebounds;
+            case 'assist': return stats.stats.assists;
+            case 'steal': return stats.stats.steals;
+            case 'turnover': return stats.stats.turnovers;
+            case 'block': return stats.stats.blocks;
+            default: return 0;
+        }
+    };
+
+    const getStatLabel = (type: StatType): string => {
+        switch (type) {
+            case 'rebound': return '篮板';
+            case 'assist': return '助攻';
+            case 'steal': return '抢断';
+            case 'turnover': return '失误';
+            case 'block': return '盖帽';
+            default: return '';
+        }
+    };
+
+    const getStatColor = (type: StatType): string => {
+        switch (type) {
+            case 'rebound': return 'bg-blue-500 hover:bg-blue-600';
+            case 'assist': return 'bg-green-500 hover:bg-green-600';
+            case 'steal': return 'bg-orange-500 hover:bg-orange-600';
+            case 'turnover': return 'bg-red-500 hover:bg-red-600';
+            case 'block': return 'bg-indigo-500 hover:bg-indigo-600';
+            default: return 'bg-gray-500 hover:bg-gray-600';
+        }
+    };
+
+    const renderStatButton = (type: StatType) => {
+        const value = getStatValue(type);
+        const label = getStatLabel(type);
+        const colorClass = getStatColor(type);
+        
         return (
-            <>
-                <div className="col-span-2 flex justify-between items-center mb-2">
+            <div key={type} className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
                     <span className="text-base font-semibold">{label}</span>
                     <span className={`text-sm font-medium px-3 py-1 rounded-full 
                         ${isTeam1 
                             ? 'bg-yellow-100/80 text-yellow-800' 
                             : 'bg-purple-100/80 text-purple-800'}`}>
-                        {shotStats.made}/{shotStats.total}
+                        {value}
                     </span>
                 </div>
                 <button
                     className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
-                        ${isTeam1 
-                            ? 'bg-yellow-500 hover:bg-yellow-600 border-none text-white' 
-                            : 'bg-purple-500 hover:bg-purple-600 border-none text-white'}
-                        ${isPressing && currentPressButton.current?.type === type && currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
-                    onClick={handleClick(() => onScoreAdd?.(type, true))}
-                    onTouchStart={(e) => handleTouchStart(e, type, true)}
+                        ${colorClass} border-none text-white
+                        ${isPressing && currentPressButton.current?.type === type ? 'opacity-50' : ''}`}
+                    onClick={handleClick(() => onStatAdd?.(type))}
+                    onTouchStart={(e) => handleTouchStart(e, type)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none font-medium">命中</span>
+                    <span className="text-lg select-none font-medium">+1 {label}</span>
                 </button>
-                <button
-                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
-                        bg-gray-100 hover:bg-gray-200 border-none text-gray-700
-                        ${isPressing && currentPressButton.current?.type === type && !currentPressButton.current?.isSuccess ? 'opacity-50' : ''}`}
-                    onClick={handleClick(() => onScoreAdd?.(type, false))}
-                    onTouchStart={(e) => handleTouchStart(e, type, false)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <span className="text-lg select-none font-medium">不中</span>
-                </button>
-            </>
-        );
-    };
-
-    const renderFoulSection = () => {
-        return (
-            <>
-                <div className="col-span-2 flex justify-between items-center mb-2">
-                    <span className="text-base font-semibold">犯规</span>
-                    <div className="flex gap-3">
-                        <span className={`text-sm font-medium px-3 py-1 rounded-full 
-                            ${isTeam1 
-                                ? 'bg-yellow-100/80 text-yellow-800' 
-                                : 'bg-purple-100/80 text-purple-800'}`}>
-                            普通：{stats?.fouls || 0}
-                        </span>
-                        <span className="text-sm font-medium px-3 py-1 rounded-full bg-red-100/80 text-red-800">
-                            恶意：{stats?.flagrantFouls || 0}
-                        </span>
-                    </div>
-                </div>
-                <button
-                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
-                        bg-amber-500 hover:bg-amber-600 border-none text-white
-                        ${isPressing && currentPressButton.current?.type === 'foul' ? 'opacity-50' : ''}`}
-                    onClick={handleClick(() => onFoulAdd?.(false))}
-                    onTouchStart={(e) => handleTouchStart(e, 'foul', false)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <span className="text-lg select-none font-medium">普通犯规</span>
-                </button>
-                <button
-                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
-                        bg-red-500 hover:bg-red-600 border-none text-white
-                        ${isPressing && currentPressButton.current?.type === 'flagrant' ? 'opacity-50' : ''}`}
-                    onClick={handleClick(() => onFoulAdd?.(true))}
-                    onTouchStart={(e) => handleTouchStart(e, 'flagrant', false)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <span className="text-lg select-none font-medium">恶意犯规</span>
-                </button>
-            </>
+            </div>
         );
     };
 
     return (
         <div className="drawer">
             <input
-                id="add-data-drawer"
+                id="add-stat-drawer"
                 type="checkbox"
                 className="drawer-toggle"
                 onChange={(e) => {
@@ -251,7 +206,7 @@ export default function AddDataBox({
             />
             <div className="drawer-side z-50">
                 <label
-                    htmlFor="add-data-drawer"
+                    htmlFor="add-stat-drawer"
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
@@ -266,7 +221,7 @@ export default function AddDataBox({
                     {/* 关闭按钮 */}
                     <button
                         onClick={() => {
-                            const drawer = document.getElementById('add-data-drawer') as HTMLInputElement;
+                            const drawer = document.getElementById('add-stat-drawer') as HTMLInputElement;
                             if (drawer) {
                                 drawer.checked = false;
                             }
@@ -284,16 +239,17 @@ export default function AddDataBox({
                         <p className={`text-xl ${isTeam1 ? 'text-yellow-800' : 'text-purple-800'} 
                             select-none flex items-center justify-center gap-3 font-semibold`}>
                             <span>{player}</span>
-                            <span className="opacity-80 text-lg">({stats?.totalScore || 0}分)</span>
+                            <span className="opacity-80 text-lg">数据统计</span>
                         </p>
                     </div>
 
-                    {/* 计分按钮组 */}
-                    <div className="grid grid-cols-2 gap-3 flex-1 overflow-y-auto px-2">
-                        {renderShotTypeSection('2p', '2分球')}
-                        {renderShotTypeSection('3p', '3分球')}
-                        {renderShotTypeSection('ft', '罚球')}
-                        {renderFoulSection()}
+                    {/* 统计按钮组 */}
+                    <div className="flex flex-col gap-4 flex-1 overflow-y-auto px-2">
+                        {renderStatButton('rebound')}
+                        {renderStatButton('assist')}
+                        {renderStatButton('steal')}
+                        {renderStatButton('turnover')}
+                        {renderStatButton('block')}
                     </div>
 
                     {/* 长按提示 */}
@@ -306,5 +262,5 @@ export default function AddDataBox({
                 </div>
             </div>
         </div>
-    )
-}
+    );
+} 

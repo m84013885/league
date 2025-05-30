@@ -66,6 +66,30 @@ interface PlayerStats {
         '3p': { made: number; total: number; };
         'ft': { made: number; total: number; };
     };
+    stats: {
+        rebounds: number;
+        assists: number;
+        steals: number;
+        turnovers: number;
+        blocks: number;
+    };
+}
+
+type ShotType = '2p' | '3p' | 'ft';
+
+interface ScoreHistory {
+    player: string;
+    type: ShotType | 'foul' | 'flagrant';
+    isSuccess: boolean;
+    isTeam1: boolean;
+    previousStats: PlayerStats;
+}
+
+interface StatHistory {
+    player: string;
+    type: 'rebound' | 'assist' | 'steal' | 'turnover' | 'block';
+    isTeam1: boolean;
+    previousStats: PlayerStats;
 }
 
 interface GameData {
@@ -87,6 +111,7 @@ interface GameData {
         [key: string]: PlayerStats;
     };
     scoreHistory: ScoreHistory[];
+    statHistory: StatHistory[];
 }
 
 /**
@@ -130,8 +155,8 @@ export function compressGameData(data: GameData): string {
     const team1Id = getTeamIdByName(data.team1.name);
     const team2Id = getTeamIdByName(data.team2.name);
     
-    // 基础格式：t1Id-t2Id
-    let result = `${team1Id}-${team2Id}`;
+    // 基础格式：GAME_t1Id-t2Id
+    let result = `GAME_${team1Id}-${team2Id}`;
     
     // 添加争球数据（如果有）
     if (data.team1.jumpBalls > 0 || data.team2.jumpBalls > 0) {
@@ -157,10 +182,12 @@ export function compressGameData(data: GameData): string {
         if (playerId === -1) return;
 
         // 只有当球员有数据时才添加
-        const hasData = stats.totalScore > 0 || stats.fouls > 0 || stats.flagrantFouls > 0;
+        const hasData = stats.totalScore > 0 || stats.fouls > 0 || stats.flagrantFouls > 0 ||
+                       (stats.stats && (stats.stats.rebounds > 0 || stats.stats.assists > 0 || 
+                        stats.stats.steals > 0 || stats.stats.turnovers > 0 || stats.stats.blocks > 0));
         if (!hasData) return;
 
-        // 格式：playerId:2p命中2p未中3p命中3p未中罚球命中罚球未中普通犯规恶意犯规
+        // 格式：playerId:2p命中2p未中3p命中3p未中罚球命中罚球未中普通犯规恶意犯规篮板助攻抢断失误盖帽
         const playerStats = [
             stats.attempts['2p'].made,
             stats.attempts['2p'].total - stats.attempts['2p'].made,
@@ -169,10 +196,15 @@ export function compressGameData(data: GameData): string {
             stats.attempts['ft'].made,
             stats.attempts['ft'].total - stats.attempts['ft'].made,
             stats.fouls,
-            stats.flagrantFouls
+            stats.flagrantFouls,
+            stats.stats?.rebounds || 0,
+            stats.stats?.assists || 0,
+            stats.stats?.steals || 0,
+            stats.stats?.turnovers || 0,
+            stats.stats?.blocks || 0
         ].join('');
 
-        if (playerStats !== '00000000') {
+        if (playerStats !== '0000000000000') {
             playerData.push(`${playerId}${playerStats}`);
         }
     });
@@ -182,18 +214,15 @@ export function compressGameData(data: GameData): string {
         result += `_p${playerData.join('')}`;
     }
 
-    // 添加历史记录数据（最新的10条）
-    const recentHistory = data.scoreHistory.slice(-10);
-    if (recentHistory.length > 0) {
-        const historyData = recentHistory.map(record => {
+    // 添加历史记录压缩（只保留最近5条）
+    if (data.scoreHistory && Array.isArray(data.scoreHistory) && data.scoreHistory.length > 0) {
+        const recentScoreHistory = data.scoreHistory.slice(-5);
+        const compressedScoreHistory = recentScoreHistory.map(record => {
             const playerId = getPlayerIdByName(record.player);
             if (playerId === -1) return null;
 
-            // 动作类型编码（更短的编码）：
-            // a: 2分命中, b: 2分不中
-            // c: 3分命中, d: 3分不中
-            // e: 罚球命中, f: 罚球不中
-            // g: 普通犯规, h: 恶意犯规
+            // 紧凑编码：队伍(1位) + 球员ID(2位) + 动作类型(1位)
+            // 动作类型：a=2分命中, b=2分不中, c=3分命中, d=3分不中, e=罚球命中, f=罚球不中, g=犯规, h=恶意犯规
             let actionCode = '';
             if (record.type === '2p') actionCode = record.isSuccess ? 'a' : 'b';
             else if (record.type === '3p') actionCode = record.isSuccess ? 'c' : 'd';
@@ -201,11 +230,34 @@ export function compressGameData(data: GameData): string {
             else if (record.type === 'foul') actionCode = 'g';
             else if (record.type === 'flagrant') actionCode = 'h';
 
-            return `${record.isTeam1 ? '1' : '2'}${playerId}${actionCode}`;
+            return `${record.isTeam1 ? '1' : '2'}${playerId.toString().padStart(2, '0')}${actionCode}`;
         }).filter(Boolean).join('');
 
-        if (historyData) {
-            result += `_l${historyData}`;
+        if (compressedScoreHistory) {
+            result += `_s${compressedScoreHistory}`;
+        }
+    }
+    
+    if (data.statHistory && Array.isArray(data.statHistory) && data.statHistory.length > 0) {
+        const recentStatHistory = data.statHistory.slice(-5);
+        const compressedStatHistory = recentStatHistory.map(record => {
+            const playerId = getPlayerIdByName(record.player);
+            if (playerId === -1) return null;
+
+            // 紧凑编码：队伍(1位) + 球员ID(2位) + 统计类型(1位)
+            // 统计类型：r=篮板, a=助攻, s=抢断, t=失误, b=盖帽
+            let statCode = '';
+            if (record.type === 'rebound') statCode = 'r';
+            else if (record.type === 'assist') statCode = 'a';
+            else if (record.type === 'steal') statCode = 's';
+            else if (record.type === 'turnover') statCode = 't';
+            else if (record.type === 'block') statCode = 'b';
+
+            return `${record.isTeam1 ? '1' : '2'}${playerId.toString().padStart(2, '0')}${statCode}`;
+        }).filter(Boolean).join('');
+
+        if (compressedStatHistory) {
+            result += `_t${compressedStatHistory}`;
         }
     }
 
@@ -217,7 +269,10 @@ export function compressGameData(data: GameData): string {
  */
 export function decompressGameData(compressed: string): GameData | null {
     try {
-        const parts = compressed.split('_');
+        if (!compressed.startsWith('GAME_')) return null;
+        
+        const fullData = compressed.slice(5); // 移除 'GAME_' 前缀
+        const parts = fullData.split('_');
         
         // 解析队伍ID
         const [team1Id, team2Id] = parts[0].split('-').map(Number);
@@ -235,6 +290,7 @@ export function decompressGameData(compressed: string): GameData | null {
         let team2Hidden: string[] = [];
         const playerStats: {[key: string]: PlayerStats} = {};
         const scoreHistory: ScoreHistory[] = [];
+        const statHistory: StatHistory[] = [];
 
         // 解析争球数据
         if (parts[currentIndex]?.startsWith('j')) {
@@ -272,6 +328,13 @@ export function decompressGameData(compressed: string): GameData | null {
                     '2p': { made: 0, total: 0 },
                     '3p': { made: 0, total: 0 },
                     'ft': { made: 0, total: 0 }
+                },
+                stats: {
+                    rebounds: 0,
+                    assists: 0,
+                    steals: 0,
+                    turnovers: 0,
+                    blocks: 0
                 }
             };
         });
@@ -279,7 +342,7 @@ export function decompressGameData(compressed: string): GameData | null {
         // 解析球员数据
         if (parts[currentIndex]?.startsWith('p')) {
             const playerData = parts[currentIndex].slice(1);
-            const playerChunks = playerData.match(/.{10}/g) || [];
+            const playerChunks = playerData.match(/.{15}/g) || [];
             playerChunks.forEach(chunk => {
                 const playerId = parseInt(chunk.slice(0, 2));
                 const playerName = getPlayerNameById(playerId);
@@ -294,18 +357,27 @@ export function decompressGameData(compressed: string): GameData | null {
                         '2p': { made: stats[0], total: stats[0] + stats[1] },
                         '3p': { made: stats[2], total: stats[2] + stats[3] },
                         'ft': { made: stats[4], total: stats[4] + stats[5] }
+                    },
+                    stats: {
+                        rebounds: stats[8] || 0,
+                        assists: stats[9] || 0,
+                        steals: stats[10] || 0,
+                        turnovers: stats[11] || 0,
+                        blocks: stats[12] || 0
                     }
                 };
             });
             currentIndex++;
         }
 
-        // 解析历史记录数据
-        if (parts[currentIndex]?.startsWith('l')) {
+        // 解析得分历史记录
+        if (parts[currentIndex]?.startsWith('s')) {
             const historyData = parts[currentIndex].slice(1);
-            // 每个记录固定4个字符：队伍(1) + 球员ID(2) + 动作代码(1)
+            // 每个记录4个字符：队伍(1) + 球员ID(2) + 动作代码(1)
             for (let i = 0; i < historyData.length; i += 4) {
                 const record = historyData.slice(i, i + 4);
+                if (record.length < 4) break;
+                
                 const teamFlag = record[0];
                 const playerId = parseInt(record.slice(1, 3));
                 const actionCode = record[3];
@@ -336,10 +408,47 @@ export function decompressGameData(compressed: string): GameData | null {
                     previousStats: { ...playerStats[playerName] }
                 });
             }
+            currentIndex++;
+        }
+
+        // 解析统计历史记录
+        if (parts[currentIndex]?.startsWith('t')) {
+            const historyData = parts[currentIndex].slice(1);
+            // 每个记录4个字符：队伍(1) + 球员ID(2) + 统计代码(1)
+            for (let i = 0; i < historyData.length; i += 4) {
+                const record = historyData.slice(i, i + 4);
+                if (record.length < 4) break;
+                
+                const teamFlag = record[0];
+                const playerId = parseInt(record.slice(1, 3));
+                const statCode = record[3];
+                const playerName = getPlayerNameById(playerId);
+                if (!playerName) continue;
+
+                const isTeam1 = teamFlag === '1';
+                let type: 'rebound' | 'assist' | 'steal' | 'turnover' | 'block';
+
+                switch (statCode) {
+                    case 'r': type = 'rebound'; break;
+                    case 'a': type = 'assist'; break;
+                    case 's': type = 'steal'; break;
+                    case 't': type = 'turnover'; break;
+                    case 'b': type = 'block'; break;
+                    default: continue;
+                }
+
+                statHistory.push({
+                    player: playerName,
+                    type,
+                    isTeam1,
+                    previousStats: { ...playerStats[playerName] }
+                });
+            }
+            currentIndex++;
         }
 
         // 构建返回数据
-        const gameData: GameData = {
+        const gameDataResult: GameData = {
             team1: {
                 name: team1Name,
                 list: team1Players,
@@ -357,10 +466,11 @@ export function decompressGameData(compressed: string): GameData | null {
                 hiddenPlayers: team2Hidden
             },
             playerStats,
-            scoreHistory
+            scoreHistory,
+            statHistory
         };
 
-        return gameData;
+        return gameDataResult;
     } catch (error) {
         console.error('解压缩数据失败:', error);
         return null;

@@ -1,7 +1,8 @@
-import { ScoreHistory } from '../types';
+import { ScoreHistory, StatHistory } from '../types';
 
 interface HistoryProps {
     scoreHistory: ScoreHistory[];
+    statHistory?: StatHistory[];
     team1Name?: string;
     team2Name?: string;
     onClose?: () => void;
@@ -9,6 +10,7 @@ interface HistoryProps {
 
 export default function History({
     scoreHistory,
+    statHistory = [],
     team1Name,
     team2Name,
     onClose
@@ -24,8 +26,22 @@ export default function History({
         }
     };
 
-    // 反转历史记录数组，这样最新的记录会显示在最上面
-    const reversedHistory = [...scoreHistory].reverse();
+    const getStatActionText = (record: StatHistory) => {
+        const statLabels = {
+            rebound: '篮板',
+            assist: '助攻',
+            steal: '抢断',
+            turnover: '失误',
+            block: '盖帽'
+        };
+        return `+1 ${statLabels[record.type]}`;
+    };
+
+    // 合并并排序所有历史记录
+    const allHistory = [
+        ...scoreHistory.map(record => ({ ...record, recordType: 'score' as const })),
+        ...statHistory.map(record => ({ ...record, recordType: 'stat' as const }))
+    ].reverse(); // 最新的记录显示在最上面
 
     return (
         <div className="drawer">
@@ -70,13 +86,13 @@ export default function History({
 
                     {/* 历史记录列表 */}
                     <div className="flex-1 overflow-y-auto scrollbar-hide">
-                        {scoreHistory.length === 0 ? (
+                        {allHistory.length === 0 ? (
                             <div className="text-center text-gray-500 mt-8">
                                 暂无记录
                             </div>
                         ) : (
                             <div className="space-y-3 px-1">
-                                {reversedHistory.map((record, index) => (
+                                {allHistory.map((record, index) => (
                                     <div
                                         key={index}
                                         className="p-4 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 
@@ -92,8 +108,21 @@ export default function History({
                                                     {record.isTeam1 ? team1Name : team2Name}
                                                 </span>
                                                 <span className="font-semibold">{record.player}</span>
+                                                {/* 记录类型标识 */}
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                    record.recordType === 'score' 
+                                                        ? 'bg-blue-50 text-blue-600' 
+                                                        : 'bg-green-50 text-green-600'
+                                                }`}>
+                                                    {record.recordType === 'score' ? '得分' : '数据'}
+                                                </span>
                                             </div>
-                                            <div className="text-sm text-gray-600 mt-2">{getActionText(record)}</div>
+                                            <div className="text-sm text-gray-600 mt-2">
+                                                {record.recordType === 'score' 
+                                                    ? getActionText(record as ScoreHistory)
+                                                    : getStatActionText(record as StatHistory)
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
