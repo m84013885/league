@@ -166,7 +166,6 @@ export default function Other() {
     };
   };
 
-  const initialData = loadGameData();
   const [message, setMessage] = useState('')
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<{
@@ -174,51 +173,65 @@ export default function Other() {
     teamName: string;
     isTeam1: boolean;
   } | null>(null)
-  const [playerStats, setPlayerStats] = useState<PlayerStatsMap>(initialData.playerStats)
-  const [scoreHistory, setScoreHistory] = useState<ScoreHistory[]>(initialData.scoreHistory)
-  const [statHistory, setStatHistory] = useState<StatHistory[]>(initialData.statHistory)
+  const [playerStats, setPlayerStats] = useState<PlayerStatsMap>({})
+  const [scoreHistory, setScoreHistory] = useState<ScoreHistory[]>([])
+  const [statHistory, setStatHistory] = useState<StatHistory[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // 初始化自定义球员号码
+  // 初始化数据 - 只在组件挂载时执行一次
   useEffect(() => {
+    const initialData = loadGameData();
+    
+    setPlayerStats(initialData.playerStats);
+    setScoreHistory(initialData.scoreHistory);
+    setStatHistory(initialData.statHistory);
+    
     if (initialData.customPlayers && initialData.customPlayers.length > 0) {
       setCustomPlayers(initialData.customPlayers);
       setTempPlayers(initialData.customPlayers);
     }
-  }, [initialData.customPlayers]);
-
-  // 初始化球员数据
-  useEffect(() => {
-    const initialStats: PlayerStatsMap = {};
-    players.forEach(player => {
-      if (!playerStats[player]) {
-        initialStats[player] = {
-          totalScore: 0,
-          fouls: 0,
-          flagrantFouls: 0,
-          attempts: {
-            '2p': { made: 0, total: 0 },
-            '3p': { made: 0, total: 0 },
-            'ft': { made: 0, total: 0 }
-          },
-          stats: {
-            rebounds: 0,
-            assists: 0,
-            steals: 0,
-            turnovers: 0,
-            blocks: 0
-          }
-        };
-      }
-    });
     
-    if (Object.keys(initialStats).length > 0) {
-      setPlayerStats(prev => ({ ...prev, ...initialStats }));
-    }
-  }, [players, playerStats]);
+    setIsInitialized(true);
+  }, []); // 空依赖数组，只在挂载时执行一次
+
+  // 初始化球员数据 - 只在players变化且已初始化后执行
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    setPlayerStats(prev => {
+      const initialStats: PlayerStatsMap = {};
+      let hasNewPlayers = false;
+      
+      players.forEach(player => {
+        if (!prev[player]) {
+          hasNewPlayers = true;
+          initialStats[player] = {
+            totalScore: 0,
+            fouls: 0,
+            flagrantFouls: 0,
+            attempts: {
+              '2p': { made: 0, total: 0 },
+              '3p': { made: 0, total: 0 },
+              'ft': { made: 0, total: 0 }
+            },
+            stats: {
+              rebounds: 0,
+              assists: 0,
+              steals: 0,
+              turnovers: 0,
+              blocks: 0
+            }
+          };
+        }
+      });
+      
+      return hasNewPlayers ? { ...prev, ...initialStats } : prev;
+    });
+  }, [players, isInitialized]); // 移除playerStats依赖，避免循环
 
   // 保存数据到localStorage的函数
   const saveGameData = useCallback(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isInitialized) {
       const gameData: GameData = {
         playerStats,
         scoreHistory,
@@ -227,12 +240,18 @@ export default function Other() {
       };
       localStorage.setItem('otherPageGameData', JSON.stringify(gameData));
     }
-  }, [playerStats, scoreHistory, statHistory, customPlayers]);
+  }, [playerStats, scoreHistory, statHistory, customPlayers, isInitialized]);
 
-  // 监听数据变化，自动保存到localStorage
+  // 监听数据变化，自动保存到localStorage - 使用防抖避免频繁保存
   useEffect(() => {
-    saveGameData();
-  }, [saveGameData]);
+    if (!isInitialized) return;
+    
+    const timeoutId = setTimeout(() => {
+      saveGameData();
+    }, 500); // 500ms 防抖
+
+    return () => clearTimeout(timeoutId);
+  }, [playerStats, scoreHistory, statHistory, customPlayers, isInitialized]);
 
   // 清除所有数据的函数
   const clearAllData = () => {
