@@ -1,47 +1,123 @@
-import { ScoreHistory, StatHistory } from '../types';
+// 定义数据库明细类型
+interface GameDetailMainRow {
+  id: number;
+  player_id: number;
+  score?: number;
+  fouls?: number;
+  flagrant_fouls?: number;
+  '2p_made'?: number;
+  '2p_attempts'?: number;
+  '3p_made'?: number;
+  '3p_attempts'?: number;
+  'ft_made'?: number;
+  'ft_attempts'?: number;
+  created_at: string;
+}
+
+// 定义数据库统计数据明细类型
+interface GameDetailDataRow {
+  id: number;
+  player_id: number;
+  rebounds?: number;
+  assists?: number;
+  steals?: number;
+  turnovers?: number;
+  blocks?: number;
+  created_at: string;
+}
 
 interface HistoryProps {
-    scoreHistory: ScoreHistory[];
-    statHistory?: StatHistory[];
+    gameDetails?: GameDetailMainRow[];
+    gameDataDetails?: GameDetailDataRow[];
+    players?: { id: number, name: string }[];
     team1Name?: string;
     team2Name?: string;
+    team1List?: string[];
     onClose?: () => void;
 }
 
 export default function History({
-    scoreHistory,
-    statHistory = [],
+    gameDetails = [],
+    gameDataDetails = [],
+    players = [],
     team1Name,
     team2Name,
+    team1List = [],
     onClose
 }: HistoryProps) {
-    const getActionText = (record: ScoreHistory) => {
-        if (record.type === 'foul') {
+    const getActionText = (record: GameDetailMainRow) => {
+        // 判断是否为犯规记录
+        if (record.fouls === 1) {
             return '犯规';
-        } else if (record.type === 'flagrant') {
+        } else if (record.flagrant_fouls === 1) {
             return '恶意犯规';
         } else {
-            const typeText = record.type === '2p' ? '2分球' : record.type === '3p' ? '3分球' : '罚球';
-            return `${typeText}${record.isSuccess ? '命中' : '不中'}`;
+            // 判断投篮类型
+            if (record['2p_attempts'] === 1) {
+                return `2分球${record['2p_made'] === 1 ? '命中' : '不中'}`;
+            } else if (record['3p_attempts'] === 1) {
+                return `3分球${record['3p_made'] === 1 ? '命中' : '不中'}`;
+            } else if (record['ft_attempts'] === 1) {
+                return `罚球${record['ft_made'] === 1 ? '命中' : '不中'}`;
+            }
+            return '未知操作';
         }
     };
 
-    const getStatActionText = (record: StatHistory) => {
-        const statLabels = {
-            rebound: '篮板',
-            assist: '助攻',
-            steal: '抢断',
-            turnover: '失误',
-            block: '盖帽'
-        };
-        return `+1 ${statLabels[record.type]}`;
+    // 将game_detail_main数据转换为历史记录格式
+    const scoreHistory = gameDetails
+        .map(record => {
+            const player = players.find(p => p.id === record.player_id);
+            if (!player) return null;
+            
+            // 判断球员属于哪个队伍
+            const isTeam1 = team1List.includes(player.name);
+            
+            return {
+                id: record.id,
+                player: player.name,
+                action: getActionText(record),
+                created_at: record.created_at,
+                score: record.score || 0,
+                isTeam1,
+                recordType: 'score' as const
+            };
+        })
+        .filter((record): record is NonNullable<typeof record> => record !== null);
+
+    // 将game_detail_data数据转换为历史记录格式
+    const getStatActionText = (record: GameDetailDataRow) => {
+        if (record.rebounds === 1) return '篮板';
+        if (record.assists === 1) return '助攻';
+        if (record.steals === 1) return '抢断';
+        if (record.turnovers === 1) return '失误';
+        if (record.blocks === 1) return '盖帽';
+        return '未知操作';
     };
 
-    // 合并并排序所有历史记录
-    const allHistory = [
-        ...scoreHistory.map(record => ({ ...record, recordType: 'score' as const })),
-        ...statHistory.map(record => ({ ...record, recordType: 'stat' as const }))
-    ].reverse(); // 最新的记录显示在最上面
+    const dataHistory = gameDataDetails
+        .map(record => {
+            const player = players.find(p => p.id === record.player_id);
+            if (!player) return null;
+            
+            // 判断球员属于哪个队伍
+            const isTeam1 = team1List.includes(player.name);
+            
+            return {
+                id: record.id,
+                player: player.name,
+                action: getStatActionText(record),
+                created_at: record.created_at,
+                score: 0,
+                isTeam1,
+                recordType: 'data' as const
+            };
+        })
+        .filter((record): record is NonNullable<typeof record> => record !== null);
+
+    // 合并所有历史记录并按时间排序
+    const allHistory = [...scoreHistory, ...dataHistory]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return (
         <div className="drawer">
@@ -94,7 +170,7 @@ export default function History({
                             <div className="space-y-3 px-1">
                                 {allHistory.map((record, index) => (
                                     <div
-                                        key={index}
+                                        key={record.id || index}
                                         className="p-4 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 
                                             flex items-center gap-3 border border-gray-100"
                                     >
@@ -118,10 +194,15 @@ export default function History({
                                                 </span>
                                             </div>
                                             <div className="text-sm text-gray-600 mt-2">
-                                                {record.recordType === 'score' 
-                                                    ? getActionText(record as ScoreHistory)
-                                                    : getStatActionText(record as StatHistory)
-                                                }
+                                                {record.action}
+                                            </div>
+                                            {record.score > 0 && (
+                                                <div className="text-xs text-green-600 mt-1">
+                                                    +{record.score}分
+                                                </div>
+                                            )}
+                                            <div className="text-xs text-gray-400 mt-1">
+                                                {new Date(record.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                             </div>
                                         </div>
                                     </div>

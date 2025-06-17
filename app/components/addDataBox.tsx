@@ -152,12 +152,12 @@ export default function AddDataBox({
 
     const getStatColor = (type: StatType): string => {
         switch (type) {
-            case 'rebound': return 'bg-blue-500 hover:bg-blue-600';
-            case 'assist': return 'bg-green-500 hover:bg-green-600';
-            case 'steal': return 'bg-orange-500 hover:bg-orange-600';
-            case 'turnover': return 'bg-red-500 hover:bg-red-600';
-            case 'block': return 'bg-indigo-500 hover:bg-indigo-600';
-            default: return 'bg-gray-500 hover:bg-gray-600';
+            case 'rebound': return 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700';
+            case 'assist': return 'from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700';
+            case 'steal': return 'from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700';
+            case 'turnover': return 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700';
+            case 'block': return 'from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700';
+            default: return 'from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700';
         }
     };
 
@@ -167,26 +167,27 @@ export default function AddDataBox({
         const colorClass = getStatColor(type);
         
         return (
-            <div key={type} className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                    <span className="text-base font-semibold">{label}</span>
-                    <span className={`text-sm font-medium px-3 py-1 rounded-full 
+            <div key={type} className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center px-1">
+                    <span className="text-sm font-semibold text-gray-700">{label}</span>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full shadow-sm
                         ${isTeam1 
-                            ? 'bg-yellow-100/80 text-yellow-800' 
-                            : 'bg-purple-100/80 text-purple-800'}`}>
+                            ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 shadow-yellow-200/50' 
+                            : 'bg-gradient-to-r from-purple-400 to-purple-500 text-purple-900 shadow-purple-200/50'}`}>
                         {value}
                     </span>
                 </div>
                 <button
-                    className={`btn h-16 select-none shadow-md hover:shadow-lg transition-all duration-200
-                        ${colorClass} border-none text-white
-                        ${isPressing && currentPressButton.current?.type === type ? 'opacity-50' : ''}`}
+                    className={`h-12 select-none transition-all duration-300 ease-out transform hover:scale-[1.02] active:scale-[0.98]
+                        bg-gradient-to-r ${colorClass} border-none text-white font-semibold
+                        shadow-lg hover:shadow-xl rounded-xl
+                        ${isPressing && currentPressButton.current?.type === type ? 'opacity-60 scale-95' : ''}`}
                     onClick={handleClick(() => onStatAdd?.(type))}
                     onTouchStart={(e) => handleTouchStart(e, type)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-lg select-none font-medium">+1 {label}</span>
+                    <span className="text-base select-none font-semibold tracking-wide">+1 {label}</span>
                 </button>
             </div>
         );
@@ -211,8 +212,11 @@ export default function AddDataBox({
                     className="drawer-overlay"
                 ></label>
                 <div 
-                    className={`menu p-4 w-full max-w-md h-screen ${isTeam1 ? 'bg-yellow-50/95' : 'bg-purple-50/95'} 
-                        backdrop-blur-xl relative flex flex-col transition-transform duration-200`}
+                    className={`menu p-4 w-full max-w-md h-screen relative flex flex-col transition-transform duration-200
+                        ${isTeam1 
+                            ? 'bg-gradient-to-br from-yellow-50 via-yellow-50/90 to-orange-50/80' 
+                            : 'bg-gradient-to-br from-purple-50 via-purple-50/90 to-indigo-50/80'} 
+                        backdrop-blur-xl`}
                     style={{ transform: `translateX(${drawerTranslate}px)` }}
                     onTouchStart={handleDrawerTouchStart}
                     onTouchMove={handleDrawerTouchMove}
@@ -226,8 +230,9 @@ export default function AddDataBox({
                                 drawer.checked = false;
                             }
                         }}
-                        className={`absolute top-4 right-4 btn btn-circle btn-sm bg-white/80 hover:bg-white/90 border-none
-                            shadow-lg hover:shadow-xl transition-all duration-200`}
+                        className={`absolute top-4 right-4 btn btn-circle btn-sm bg-white/90 hover:bg-white border-none
+                            shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110
+                            ${isTeam1 ? 'text-yellow-600 hover:text-yellow-700' : 'text-purple-600 hover:text-purple-700'}`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -235,16 +240,18 @@ export default function AddDataBox({
                     </button>
 
                     {/* 头部信息 */}
-                    <div className="text-center mb-6 mt-4">
-                        <p className={`text-xl ${isTeam1 ? 'text-yellow-800' : 'text-purple-800'} 
-                            select-none flex items-center justify-center gap-3 font-semibold`}>
-                            <span>{player}</span>
-                            <span className="opacity-80 text-lg">数据统计</span>
-                        </p>
+                    <div className="text-center mb-5 mt-3">
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-sm
+                            ${isTeam1 
+                                ? 'bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800' 
+                                : 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800'}`}>
+                            <span className="text-lg font-bold">{player}</span>
+                            <span className="opacity-80 text-sm font-medium">数据统计</span>
+                        </div>
                     </div>
 
                     {/* 统计按钮组 */}
-                    <div className="flex flex-col gap-4 flex-1 overflow-y-auto px-2">
+                    <div className="flex flex-col gap-3 flex-1 px-2">
                         {renderStatButton('rebound')}
                         {renderStatButton('assist')}
                         {renderStatButton('steal')}
@@ -253,11 +260,15 @@ export default function AddDataBox({
                     </div>
 
                     {/* 长按提示 */}
-                    <div className="text-center mt-4 mb-safe pb-12 text-sm text-gray-500 select-none bg-white/50 
-                        backdrop-blur-sm py-4 rounded-xl">
-                        长按按钮可删除对应类型的最后一次记录
-                        <br />
-                        向左滑动可关闭面板
+                    <div className={`text-center mt-4 mb-safe pb-8 text-xs text-gray-600 select-none 
+                        bg-white/70 backdrop-blur-sm py-3 rounded-2xl shadow-sm border border-white/50
+                        ${isTeam1 ? 'shadow-yellow-100/30' : 'shadow-purple-100/30'}`}>
+                        <div className="font-medium mb-1">💡 操作提示</div>
+                        <div className="text-gray-500">
+                            长按按钮可删除对应类型的最后一次记录
+                            <br />
+                            向左滑动可关闭面板
+                        </div>
                     </div>
                 </div>
             </div>

@@ -23,6 +23,13 @@ interface SettingProps {
             fouls: number;
             flagrantFouls: number;
             totalScore: number;
+            stats: {
+                rebounds: number;
+                assists: number;
+                steals: number;
+                turnovers: number;
+                blocks: number;
+            };
         };
     };
 }
@@ -90,6 +97,28 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
                         <div className="flex items-center gap-1.5">
                             <span className="text-sm opacity-70">恶犯:</span>
                             <span className="badge bg-red-100 text-red-800 font-medium">{stats?.flagrantFouls || 0}</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs opacity-70">篮板:</span>
+                            <span className="badge badge-sm bg-blue-100 text-blue-800">{stats?.stats?.rebounds || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs opacity-70">助攻:</span>
+                            <span className="badge badge-sm bg-green-100 text-green-800">{stats?.stats?.assists || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs opacity-70">抢断:</span>
+                            <span className="badge badge-sm bg-orange-100 text-orange-800">{stats?.stats?.steals || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs opacity-70">失误:</span>
+                            <span className="badge badge-sm bg-red-100 text-red-800">{stats?.stats?.turnovers || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs opacity-70">盖帽:</span>
+                            <span className="badge badge-sm bg-indigo-100 text-indigo-800">{stats?.stats?.blocks || 0}</span>
                         </div>
                     </div>
                 </div>

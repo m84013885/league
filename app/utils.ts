@@ -149,13 +149,13 @@ export function compressGameData(data: GameData): string {
     // 添加球员列表数据
     const team1PlayerIds = data.team1.list.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     const team2PlayerIds = data.team2.list.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
-    result += `_${team1PlayerIds.join('')}_${team2PlayerIds.join('')}`;
+    result += `_${team1PlayerIds.map(id => id.toString().padStart(2, '0')).join('')}_${team2PlayerIds.map(id => id.toString().padStart(2, '0')).join('')}`;
 
     // 添加隐藏球员数据（如果有）
     const team1HiddenIds = data.team1.hiddenPlayers.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     const team2HiddenIds = data.team2.hiddenPlayers.map(name => getPlayerIdByName(name)).filter(id => id !== -1);
     if (team1HiddenIds.length > 0 || team2HiddenIds.length > 0) {
-        result += `_h${team1HiddenIds.join('')}${team2HiddenIds.join('')}`;
+        result += `_h${team1HiddenIds.map(id => id.toString().padStart(2, '0')).join('')}|${team2HiddenIds.map(id => id.toString().padStart(2, '0')).join('')}`;
     }
 
     // 添加球员数据（只添加有得分或犯规的球员）
@@ -170,14 +170,14 @@ export function compressGameData(data: GameData): string {
                         stats.stats.steals > 0 || stats.stats.turnovers > 0 || stats.stats.blocks > 0));
         if (!hasData) return;
 
-        // 格式：playerId:2p命中2p未中3p命中3p未中罚球命中罚球未中普通犯规恶意犯规篮板助攻抢断失误盖帽
+        // 格式：playerId:2p命中,2p总数,3p命中,3p总数,罚球命中,罚球总数,普通犯规,恶意犯规,篮板,助攻,抢断,失误,盖帽
         const playerStats = [
             stats.attempts['2p'].made,
-            stats.attempts['2p'].total - stats.attempts['2p'].made,
+            stats.attempts['2p'].total,
             stats.attempts['3p'].made,
-            stats.attempts['3p'].total - stats.attempts['3p'].made,
+            stats.attempts['3p'].total,
             stats.attempts['ft'].made,
-            stats.attempts['ft'].total - stats.attempts['ft'].made,
+            stats.attempts['ft'].total,
             stats.fouls,
             stats.flagrantFouls,
             stats.stats?.rebounds || 0,
@@ -185,16 +185,16 @@ export function compressGameData(data: GameData): string {
             stats.stats?.steals || 0,
             stats.stats?.turnovers || 0,
             stats.stats?.blocks || 0
-        ].join('');
+        ].join(',');
 
-        if (playerStats !== '0000000000000') {
-            playerData.push(`${playerId}${playerStats}`);
+        if (playerStats !== '0,0,0,0,0,0,0,0,0,0,0,0,0') {
+            playerData.push(`${playerId}:${playerStats}`);
         }
     });
 
     // 添加球员数据到结果字符串（如果有）
     if (playerData.length > 0) {
-        result += `_p${playerData.join('')}`;
+        result += `_p${playerData.join('|')}`;
     }
 
     // 添加历史记录压缩（只保留最近5条）
@@ -284,20 +284,29 @@ export function decompressGameData(compressed: string): GameData | null {
         }
 
         // 解析球员列表
-        const team1Ids = parts[currentIndex].match(/.{1,2}/g) || [];
+        const team1Ids = parts[currentIndex].match(/.{2}/g) || [];
         team1Players = team1Ids.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
         currentIndex++;
 
-        const team2Ids = parts[currentIndex].match(/.{1,2}/g) || [];
+        const team2Ids = parts[currentIndex].match(/.{2}/g) || [];
         team2Players = team2Ids.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
         currentIndex++;
 
         // 解析隐藏球员列表
         if (parts[currentIndex]?.startsWith('h')) {
             const hiddenData = parts[currentIndex].slice(1);
-            const hiddenIds = hiddenData.match(/.{1,2}/g) || [];
-            team1Hidden = hiddenIds.slice(0, hiddenIds.length/2).map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
-            team2Hidden = hiddenIds.slice(hiddenIds.length/2).map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+            const [team1HiddenStr, team2HiddenStr] = hiddenData.split('|');
+            
+            if (team1HiddenStr) {
+                const team1HiddenIds = team1HiddenStr.match(/.{2}/g) || [];
+                team1Hidden = team1HiddenIds.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+            }
+            
+            if (team2HiddenStr) {
+                const team2HiddenIds = team2HiddenStr.match(/.{2}/g) || [];
+                team2Hidden = team2HiddenIds.map(id => getPlayerNameById(parseInt(id))).filter(Boolean);
+            }
+            
             currentIndex++;
         }
 
@@ -325,30 +334,33 @@ export function decompressGameData(compressed: string): GameData | null {
         // 解析球员数据
         if (parts[currentIndex]?.startsWith('p')) {
             const playerData = parts[currentIndex].slice(1);
-            const playerChunks = playerData.match(/.{15}/g) || [];
+            const playerChunks = playerData.split('|');
             playerChunks.forEach(chunk => {
-                const playerId = parseInt(chunk.slice(0, 2));
+                const [playerIdStr, statsStr] = chunk.split(':');
+                const playerId = parseInt(playerIdStr);
                 const playerName = getPlayerNameById(playerId);
-                if (!playerName) return;
+                if (!playerName || !statsStr) return;
 
-                const stats = chunk.slice(2).split('').map(Number);
-                playerStats[playerName] = {
-                    totalScore: stats[0] * 2 + stats[2] * 3 + stats[4],
-                    fouls: stats[6],
-                    flagrantFouls: stats[7],
-                    attempts: {
-                        '2p': { made: stats[0], total: stats[0] + stats[1] },
-                        '3p': { made: stats[2], total: stats[2] + stats[3] },
-                        'ft': { made: stats[4], total: stats[4] + stats[5] }
-                    },
-                    stats: {
-                        rebounds: stats[8] || 0,
-                        assists: stats[9] || 0,
-                        steals: stats[10] || 0,
-                        turnovers: stats[11] || 0,
-                        blocks: stats[12] || 0
-                    }
-                };
+                const stats = statsStr.split(',').map(Number);
+                if (stats.length >= 13) {
+                    playerStats[playerName] = {
+                        totalScore: stats[0] * 2 + stats[2] * 3 + stats[4], // 2p命中*2 + 3p命中*3 + 罚球命中
+                        fouls: stats[6],
+                        flagrantFouls: stats[7],
+                        attempts: {
+                            '2p': { made: stats[0], total: stats[1] },
+                            '3p': { made: stats[2], total: stats[3] },
+                            'ft': { made: stats[4], total: stats[5] }
+                        },
+                        stats: {
+                            rebounds: stats[8] || 0,
+                            assists: stats[9] || 0,
+                            steals: stats[10] || 0,
+                            turnovers: stats[11] || 0,
+                            blocks: stats[12] || 0
+                        }
+                    };
+                }
             });
             currentIndex++;
         }
