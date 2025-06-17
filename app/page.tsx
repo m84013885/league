@@ -99,6 +99,8 @@ export default function Home() {
   const [players, setPlayers] = useState<{ id: number, name: string }[]>([]);
   const [teams, setTeams] = useState<{ id: number, name: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  // 新增：初始加载状态
+  const [initialLoading, setInitialLoading] = useState(true);
   // 新增：当前选中的队伍
   const [currentTeam, setCurrentTeam] = useState<'team1' | 'team2'>('team1');
   // 新增：今天的比赛
@@ -112,14 +114,22 @@ export default function Home() {
   useEffect(() => {
     // 拉取球员和队伍
     (async () => {
-      // 这里假设有getPlayers/getTeams API
-      const players = await import('@/app/db/api').then(m => m.getPlayers());
-      setPlayers(players);
-      const teams = await import('@/app/db/api').then(m => m.getTeams());
-      setTeams(teams);
-      // 拉取今天的比赛
-      const todayGames = await import('@/app/db/api').then(m => m.getTodayGames());
-      setTodayGames(todayGames || []);
+      setInitialLoading(true);
+      try {
+        // 这里假设有getPlayers/getTeams API
+        const players = await import('@/app/db/api').then(m => m.getPlayers());
+        setPlayers(players);
+        const teams = await import('@/app/db/api').then(m => m.getTeams());
+        setTeams(teams);
+        // 拉取今天的比赛
+        const todayGames = await import('@/app/db/api').then(m => m.getTodayGames());
+        setTodayGames(todayGames || []);
+      } catch (error) {
+        console.error('初始化数据失败:', error);
+        setMessage('初始化数据失败');
+      } finally {
+        setInitialLoading(false);
+      }
     })();
   }, []);
 
@@ -1010,7 +1020,15 @@ export default function Home() {
           </div>
         )}
         <main className="flex flex-col w-full h-screen">
-          {!isTeamSelected ? (
+          {/* 初始加载状态 */}
+          {initialLoading ? (
+            <div className="flex flex-col items-center justify-center w-full h-full">
+              <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+                <div className="text-lg font-semibold text-gray-700">正在加载数据...</div>
+              </div>
+            </div>
+          ) : !isTeamSelected ? (
             <div className="flex flex-col items-center gap-6 w-full h-full justify-center p-4">
               <button
                 className="btn-hover-effect btn btn-primary text-center text-lg font-semibold px-8 py-4 rounded-full shadow-lg"
