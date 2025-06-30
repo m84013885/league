@@ -47,17 +47,17 @@ export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: 
     const getButtonStyle = (team: { name: string, list: string[] }) => {
         const index = selectedTeams.findIndex(t => t.name === team.name);
         if (index === 0) {
-            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-bold text-lg transition-all duration-200 \
                 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 \
                 hover:from-yellow-200 hover:to-yellow-300 shadow-md hover:shadow-lg \
                 border border-yellow-300/50";
         } else if (index === 1) {
-            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-bold text-lg transition-all duration-200 \
                 bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 \
                 hover:from-purple-200 hover:to-purple-300 shadow-md hover:shadow-lg \
                 border border-purple-300/50";
         } else {
-            return "relative overflow-hidden px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-200 \
+            return "relative overflow-hidden px-6 py-4 rounded-2xl font-bold text-lg transition-all duration-200 \
                 bg-white/80 hover:bg-white/90 text-gray-700 shadow-md hover:shadow-lg \
                 border border-gray-200/50 hover:border-blue-200/50 hover:text-blue-600";
         }
@@ -82,7 +82,7 @@ export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: 
                             text-transparent bg-clip-text">选择对战队伍</h2>
                         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-base-100/50 backdrop-blur-sm">
                             <span className="text-sm text-gray-600">已选择</span>
-                            <span className="text-lg font-semibold text-blue-600">{selectedTeams.length}</span>
+                            <span className="text-lg font-bold text-blue-600">{selectedTeams.length}</span>
                             <span className="text-sm text-gray-600">/ 2</span>
                         </div>
                         {todayUsedTeamNames.length > 0 && (
@@ -95,7 +95,7 @@ export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: 
                     {/* 显示今天已有比赛的队伍 */}
                     {todayUsedTeamNames.length > 0 && (
                         <div className="mb-6 p-4 bg-orange-50/70 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-200/50">
-                            <h3 className="font-semibold mb-3 text-orange-700">今日已参赛队伍</h3>
+                            <h3 className="font-bold mb-3 text-orange-700">今日已参赛队伍</h3>
                             <div className="flex flex-wrap gap-2">
                                 {todayUsedTeamNames.map((teamName) => (
                                     <span
@@ -133,7 +133,7 @@ export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: 
                     {selectedTeams.length > 0 && (
                         <div className="mb-8 p-6 bg-base-100/70 backdrop-blur-sm rounded-2xl shadow-lg 
                             border border-white/20">
-                            <h3 className="font-semibold mb-4 text-gray-700">已选择队伍</h3>
+                            <h3 className="font-bold mb-4 text-gray-700">已选择队伍</h3>
                             <div className="space-y-3">
                                 {selectedTeams[0] && (
                                     <div className="flex items-center gap-3 p-3 rounded-xl bg-yellow-50/50 
@@ -155,7 +155,7 @@ export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: 
 
                     {/* 确定按钮 */}
                     <button
-                        className={`w-full px-6 py-4 rounded-2xl font-semibold text-lg transition-all duration-300
+                        className={`w-full px-6 py-4 rounded-2xl font-bold text-lg transition-all duration-300
                             ${selectedTeams.length === 2
                                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 \
                                     text-white shadow-lg hover:shadow-xl \

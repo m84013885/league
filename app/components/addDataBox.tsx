@@ -169,7 +169,7 @@ export default function AddDataBox({
         return (
             <div key={type} className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center px-1">
-                    <span className="text-sm font-semibold text-gray-700">{label}</span>
+                    <span className="text-sm font-bold text-gray-700">{label}</span>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full shadow-sm
                         ${isTeam1 
                             ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 shadow-yellow-200/50' 
@@ -179,7 +179,7 @@ export default function AddDataBox({
                 </div>
                 <button
                     className={`h-12 select-none transition-all duration-300 ease-out transform hover:scale-[1.02] active:scale-[0.98]
-                        bg-gradient-to-r ${colorClass} border-none text-white font-semibold
+                        bg-gradient-to-r ${colorClass} border-none text-white font-bold
                         shadow-lg hover:shadow-xl rounded-xl
                         ${isPressing && currentPressButton.current?.type === type ? 'opacity-60 scale-95' : ''}`}
                     onClick={handleClick(() => onStatAdd?.(type))}
@@ -187,7 +187,7 @@ export default function AddDataBox({
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <span className="text-base select-none font-semibold tracking-wide">+1 {label}</span>
+                    <span className="text-base select-none font-bold tracking-wide">+1 {label}</span>
                 </button>
             </div>
         );

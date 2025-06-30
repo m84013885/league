@@ -158,7 +158,7 @@ export default function AddScoreBox({
         return (
             <>
                 <div className="col-span-2 flex justify-between items-center mb-2">
-                    <span className="text-base font-semibold">{label}</span>
+                    <span className="text-base font-bold">{label}</span>
                     <span className={`text-sm font-medium px-3 py-1 rounded-full 
                         ${isTeam1 
                             ? 'bg-yellow-100/80 text-yellow-800' 
@@ -198,7 +198,7 @@ export default function AddScoreBox({
         return (
             <>
                 <div className="col-span-2 flex justify-between items-center mb-2">
-                    <span className="text-base font-semibold">犯规</span>
+                    <span className="text-base font-bold">犯规</span>
                     <div className="flex gap-3">
                         <span className={`text-sm font-medium px-3 py-1 rounded-full 
                             ${isTeam1 
@@ -282,7 +282,7 @@ export default function AddScoreBox({
                     {/* 头部信息 */}
                     <div className="text-center mb-6 mt-4">
                         <p className={`text-xl ${isTeam1 ? 'text-yellow-800' : 'text-purple-800'} 
-                            select-none flex items-center justify-center gap-3 font-semibold`}>
+                            select-none flex items-center justify-center gap-3 font-bold`}>
                             <span>{player}</span>
                             <span className="opacity-80 text-lg">({stats?.totalScore || 0}分)</span>
                         </p>

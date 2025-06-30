@@ -180,7 +180,7 @@ export default function TeamManagePage() {
 
                 {/* 选择赛季 */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <h2 className="text-2xl font-semibold text-gray-800 mb-4">选择赛季</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">选择赛季</h2>
                     {seasons.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
                             <p>还没有赛季，请先创建赛季</p>
@@ -196,7 +196,7 @@ export default function TeamManagePage() {
                                         : 'bg-white text-gray-700 border-gray-300 hover:border-purple-400 hover:shadow-md'
                                         }`}
                                 >
-                                    <div className="font-semibold">{season.name}</div>
+                                    <div className="font-bold">{season.name}</div>
                                     <div className="text-sm opacity-75">
                                         {new Date(season.created_at).toLocaleDateString('zh-CN')}
                                     </div>
@@ -210,7 +210,7 @@ export default function TeamManagePage() {
                     <>
                         {/* 创建队伍表单 */}
                         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
                                 {editingTeam ? `编辑队伍: ${editingTeam.name}` : '创建新队伍'}
                             </h2>
 
@@ -228,7 +228,7 @@ export default function TeamManagePage() {
                                         <button
                                             type="submit"
                                             disabled={loading || !teamName.trim()}
-                                            className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                                            className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold"
                                         >
                                             {loading ? '创建中...' : '创建队伍'}
                                         </button>
@@ -238,7 +238,7 @@ export default function TeamManagePage() {
 
                             {/* 选择球员 */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3">
                                     选择球员 ({selectedPlayerIds.length} 名)
                                 </h3>
 
@@ -279,7 +279,7 @@ export default function TeamManagePage() {
                                         <button
                                             onClick={handleUpdateTeamPlayers}
                                             disabled={loading}
-                                            className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                                            className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold"
                                         >
                                             {loading ? '更新中...' : '更新球员'}
                                         </button>
@@ -288,7 +288,7 @@ export default function TeamManagePage() {
                                                 setEditingTeam(null);
                                                 setSelectedPlayerIds([]);
                                             }}
-                                            className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold"
+                                            className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-bold"
                                         >
                                             取消
                                         </button>
@@ -300,7 +300,7 @@ export default function TeamManagePage() {
                         {/* 队伍列表 */}
                         <div className="bg-white rounded-2xl shadow-lg p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-semibold text-gray-800">队伍列表</h2>
+                                <h2 className="text-2xl font-bold text-gray-800">队伍列表</h2>
                                 <div className="text-sm text-gray-500">
                                     共 {teams.length} 支队伍
                                 </div>
@@ -320,7 +320,7 @@ export default function TeamManagePage() {
                                             className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100 hover:shadow-md transition-shadow"
                                         >
                                             <div className="flex justify-between items-start mb-4">
-                                                <h3 className="text-xl font-semibold text-gray-800">
+                                                <h3 className="text-xl font-bold text-gray-800">
                                                     {team.name}
                                                 </h3>
                                                 <div className="flex gap-2">

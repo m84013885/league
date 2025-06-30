@@ -94,7 +94,7 @@ export default function PlayerManagePage() {
 
                 {/* 创建球员表单 */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <h2 className="text-2xl font-semibold text-gray-800 mb-4">创建新球员</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">创建新球员</h2>
                     <form onSubmit={handleCreatePlayer} className="flex gap-4">
                         <input
                             type="text"
@@ -107,7 +107,7 @@ export default function PlayerManagePage() {
                         <button
                             type="submit"
                             disabled={loading || !playerName.trim()}
-                            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold"
                         >
                             {loading ? '创建中...' : '创建球员'}
                         </button>
@@ -117,7 +117,7 @@ export default function PlayerManagePage() {
                 {/* 球员列表 */}
                 <div className="bg-white rounded-2xl shadow-lg p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-800">球员列表</h2>
+                        <h2 className="text-2xl font-bold text-gray-800">球员列表</h2>
                         <div className="text-sm text-gray-500">
                             共 {players.length} 名球员
                         </div>
@@ -142,7 +142,7 @@ export default function PlayerManagePage() {
                                     className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 hover:shadow-md transition-shadow"
                                 >
                                     <div className="flex justify-between items-start mb-3">
-                                        <h3 className="text-xl font-semibold text-gray-800">
+                                        <h3 className="text-xl font-bold text-gray-800">
                                             {player.name}
                                         </h3>
                                         <button

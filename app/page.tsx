@@ -757,7 +757,7 @@ export default function Home() {
           <span className={`${textColorClass} font-bold text-lg truncate w-[90%] mb-1`}>
             {player}
           </span>
-          <div className={`${textColorClass} text-xl font-semibold flex items-center justify-center gap-1 score-animation`}>
+          <div className={`${textColorClass} text-xl font-bold flex items-center justify-center gap-1 score-animation`}>
             <span>{stats.totalScore}</span>
             <span className="text-sm opacity-70">分</span>
           </div>
@@ -1037,13 +1037,13 @@ export default function Home() {
             <div className="flex flex-col items-center justify-center w-full h-full">
               <div className="flex flex-col items-center gap-4">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
-                <div className="text-lg font-semibold text-gray-700">正在加载数据...</div>
+                <div className="text-lg font-bold text-gray-700">正在加载数据...</div>
               </div>
             </div>
           ) : !isTeamSelected ? (
             <div className="flex flex-col items-center gap-6 w-full h-full justify-center p-4">
               <button
-                className="btn-hover-effect btn btn-primary text-center text-lg font-semibold px-8 py-4 rounded-full shadow-lg"
+                className="btn-hover-effect btn btn-primary text-center text-lg font-bold px-8 py-4 rounded-full shadow-lg"
                 onClick={() => {
                   (document.getElementById('select-team-drawer') as HTMLInputElement).checked = true;
                 }}
@@ -1053,7 +1053,7 @@ export default function Home() {
               {/* 新增：今日比赛快速进入 */}
               {todayGames.length > 0 && (
                 <div className="w-full max-w-md mb-2 flex flex-col items-center gap-2">
-                  <div className="text-base font-semibold text-gray-700">今日已有比赛：</div>
+                  <div className="text-base font-bold text-gray-700">今日已有比赛：</div>
                   {todayGames.map(game => (
                     <div key={game.id} className="w-full flex items-center justify-between bg-white rounded-lg shadow p-3 border border-gray-100 mb-1">
                       <div className="flex flex-col">
@@ -1076,7 +1076,7 @@ export default function Home() {
                       <h3 className="text-3xl font-bold text-yellow-800 mb-2">
                         {team1?.name}
                       </h3>
-                      <div className="text-xl text-yellow-700 font-semibold">
+                      <div className="text-xl text-yellow-700 font-bold">
                         总分：<span className="score-animation">{team1?.totalScore || 0}</span>
                       </div>
                     </div>
@@ -1093,7 +1093,7 @@ export default function Home() {
                       <h3 className="text-3xl font-bold text-purple-800 mb-2">
                         {team2?.name}
                       </h3>
-                      <div className="text-xl text-purple-700 font-semibold">
+                      <div className="text-xl text-purple-700 font-bold">
                         总分：<span className="score-animation">{team2?.totalScore || 0}</span>
                       </div>
                     </div>
@@ -1165,7 +1165,7 @@ export default function Home() {
       />
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl px-6 py-4 shadow-lg text-lg font-semibold">数据同步中...</div>
+          <div className="bg-white rounded-xl px-6 py-4 shadow-lg text-lg font-bold">数据同步中...</div>
         </div>
       )}
     </>

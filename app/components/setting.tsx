@@ -81,7 +81,7 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
                             >
                                 {isHidden ? '显示' : '隐藏'}
                             </button>
-                            <span className={`text-base font-semibold ${isHidden ? 'line-through opacity-70' : ''}`}>
+                            <span className={`text-base font-bold ${isHidden ? 'line-through opacity-70' : ''}`}>
                                 {player}
                             </span>
                         </div>
@@ -156,7 +156,7 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
                     <div className="mb-4 card bg-base-100/90 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
                         <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-base-200/50"
                              onClick={() => setShowJumpBalls(!showJumpBalls)}>
-                            <h3 className="text-lg font-semibold">争球机会</h3>
+                            <h3 className="text-lg font-bold">争球机会</h3>
                             <button className={`btn btn-circle btn-ghost btn-sm transition-transform duration-200 
                                 ${showJumpBalls ? 'rotate-180' : ''}`}>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -204,7 +204,7 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
                     <div className="mb-4 card bg-base-100/90 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
                         <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-base-200/50"
                              onClick={() => setShowTeamFouls(!showTeamFouls)}>
-                            <h3 className="text-lg font-semibold">队伍总犯规</h3>
+                            <h3 className="text-lg font-bold">队伍总犯规</h3>
                             <button className={`btn btn-circle btn-ghost btn-sm transition-transform duration-200 
                                 ${showTeamFouls ? 'rotate-180' : ''}`}>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -228,7 +228,7 @@ export default function Setting({ team1, team2, onJumpBall, onResetJumpBalls, on
 
                     {/* 球员统计 */}
                     <div className="flex-1 flex flex-col min-h-0">
-                        <h3 className="text-lg font-semibold mb-3">球员统计</h3>
+                        <h3 className="text-lg font-bold mb-3">球员统计</h3>
                         <div className="tabs tabs-boxed mb-3 bg-base-100/50 p-1 rounded-2xl">
                             <a
                                 className={`tab flex-1 transition-all duration-200 rounded-xl ${selectedTeam === 'team1' ? 'tab-active bg-yellow-100 text-yellow-900' : ''}`}

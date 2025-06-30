@@ -183,7 +183,7 @@ export default function History({
                                                 }`}>
                                                     {record.isTeam1 ? team1Name : team2Name}
                                                 </span>
-                                                <span className="font-semibold">{record.player}</span>
+                                                <span className="font-bold">{record.player}</span>
                                                 {/* 记录类型标识 */}
                                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                                     record.recordType === 'score' 
