@@ -110,6 +110,18 @@ export default function Home() {
   // 新增：游戏统计数据明细
   const [gameDataDetails, setGameDataDetails] = useState<GameDetailDataRow[]>([]);
 
+  // 计算今天已有比赛的队伍名称
+  const todayUsedTeamNames = useMemo(() => {
+    const usedTeamIds = new Set<number>();
+    todayGames.forEach(game => {
+      usedTeamIds.add(game.team1_id);
+      usedTeamIds.add(game.team2_id);
+    });
+    return Array.from(usedTeamIds)
+      .map(teamId => teams.find(t => t.id === teamId)?.name)
+      .filter(Boolean) as string[];
+  }, [todayGames, teams]);
+
   // 初始化时拉取球员和队伍（可用useEffect）
   useEffect(() => {
     // 拉取球员和队伍
@@ -1114,7 +1126,7 @@ export default function Home() {
         </main>
       </div>
       <Toast setMessage={setMessage} message={message} />
-      <SelectTeam onTeamsConfirm={handleTeamsConfirm} />
+      <SelectTeam onTeamsConfirm={handleTeamsConfirm} todayUsedTeamNames={todayUsedTeamNames} />
       <Setting
         team1={team1}
         team2={team2}

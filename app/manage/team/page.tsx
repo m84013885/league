@@ -71,7 +71,7 @@ export default function TeamManagePage() {
 
     const fetchTeams = async () => {
         if (!selectedSeasonId) return;
-        
+
         try {
             const teamsData = await getTeams(selectedSeasonId);
             setTeams(teamsData || []);
@@ -146,8 +146,8 @@ export default function TeamManagePage() {
     };
 
     const handlePlayerToggle = (playerId: number) => {
-        setSelectedPlayerIds(prev => 
-            prev.includes(playerId) 
+        setSelectedPlayerIds(prev =>
+            prev.includes(playerId)
                 ? prev.filter(id => id !== playerId)
                 : [...prev, playerId]
         );
@@ -191,11 +191,10 @@ export default function TeamManagePage() {
                                 <button
                                     key={season.id}
                                     onClick={() => setSelectedSeasonId(season.id)}
-                                    className={`p-4 rounded-lg border transition-all ${
-                                        selectedSeasonId === season.id
-                                            ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:border-purple-400 hover:shadow-md'
-                                    }`}
+                                    className={`p-4 rounded-lg border transition-all ${selectedSeasonId === season.id
+                                        ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:border-purple-400 hover:shadow-md'
+                                        }`}
                                 >
                                     <div className="font-semibold">{season.name}</div>
                                     <div className="text-sm opacity-75">
@@ -214,7 +213,7 @@ export default function TeamManagePage() {
                             <h2 className="text-2xl font-semibold text-gray-800 mb-4">
                                 {editingTeam ? `编辑队伍: ${editingTeam.name}` : '创建新队伍'}
                             </h2>
-                            
+
                             {!editingTeam && (
                                 <form onSubmit={handleCreateTeam} className="mb-6">
                                     <div className="flex gap-4 mb-4">
@@ -242,36 +241,33 @@ export default function TeamManagePage() {
                                 <h3 className="text-lg font-semibold text-gray-800 mb-3">
                                     选择球员 ({selectedPlayerIds.length} 名)
                                 </h3>
-                                
+
                                 {players.length === 0 ? (
                                     <div className="text-center py-8 text-gray-500">
                                         <p>还没有球员，请先创建球员</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 mb-4">
                                         {players.map((player) => {
                                             const isSelectedInOtherTeam = selectedPlayerIdsInOtherTeams.includes(player.id);
                                             const isSelected = selectedPlayerIds.includes(player.id);
+                                            if (isSelectedInOtherTeam && !isSelected) {
+                                                return null;
+                                            }
                                             return (
                                                 <button
                                                     key={player.id}
                                                     onClick={() => handlePlayerToggle(player.id)}
                                                     disabled={isSelectedInOtherTeam && !isSelected}
-                                                    className={`p-3 rounded-lg border text-left transition-all ${
-                                                        isSelected
-                                                            ? 'bg-purple-100 border-purple-300 text-purple-800'
-                                                            : isSelectedInOtherTeam
-                                                                ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
-                                                                : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-purple-300'
-                                                    }`}
+                                                    className={`p-2 sm:p-3 rounded-lg border text-center transition-all text-sm sm:text-base font-medium truncate ${isSelected
+                                                        ? 'bg-purple-100 border-purple-300 text-purple-800'
+                                                        : isSelectedInOtherTeam
+                                                            ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                                                        }`}
+                                                    title={player.name} // 添加 tooltip 以防文字被截断
                                                 >
-                                                    <div className="font-medium">{player.name}</div>
-                                                    <div className="text-sm opacity-75">
-                                                        总分: {player.total_score} | 篮板: {player.total_rebounds}
-                                                    </div>
-                                                    {isSelectedInOtherTeam && !isSelected && (
-                                                        <div className="text-xs text-red-400 mt-1">已被其他队伍选中</div>
-                                                    )}
+                                                    {player.name}
                                                 </button>
                                             );
                                         })}
@@ -348,7 +344,7 @@ export default function TeamManagePage() {
                                                     </button>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="mb-3">
                                                 <div className="text-sm text-gray-600 mb-2">
                                                     球员数量: {(team.team_player || []).length} 人

@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CURRENT_TEAM_LIST } from '../config'
 
 interface SelectTeamProps {
     onTeamsConfirm?: (team1: { name: string, list: string[] }, team2: { name: string, list: string[] }) => void;
+    todayUsedTeamNames?: string[]; // 新增：今天已有比赛的队伍名称列表
 }
 
-export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
+export default function SelectTeam({ onTeamsConfirm, todayUsedTeamNames = [] }: SelectTeamProps) {
     const [selectedTeams, setSelectedTeams] = useState<{ name: string, list: string[] }[]>([]);
+
+    // 过滤掉今天已有比赛的队伍
+    const availableTeams = useMemo(() => {
+        return CURRENT_TEAM_LIST.filter(team => !todayUsedTeamNames.includes(team.name));
+    }, [todayUsedTeamNames]);
 
     const handleTeamSelect = (team: { name: string, list: string[] }) => {
         if (selectedTeams.some(t => t.name === team.name)) {
@@ -79,19 +85,48 @@ export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
                             <span className="text-lg font-semibold text-blue-600">{selectedTeams.length}</span>
                             <span className="text-sm text-gray-600">/ 2</span>
                         </div>
+                        {todayUsedTeamNames.length > 0 && (
+                            <div className="mt-3 px-4 py-2 rounded-full bg-orange-100/70 backdrop-blur-sm">
+                                <span className="text-sm text-orange-600">今日已有 {todayUsedTeamNames.length} 支队伍参赛</span>
+                            </div>
+                        )}
                     </div>
 
+                    {/* 显示今天已有比赛的队伍 */}
+                    {todayUsedTeamNames.length > 0 && (
+                        <div className="mb-6 p-4 bg-orange-50/70 backdrop-blur-sm rounded-2xl shadow-lg border border-orange-200/50">
+                            <h3 className="font-semibold mb-3 text-orange-700">今日已参赛队伍</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {todayUsedTeamNames.map((teamName) => (
+                                    <span
+                                        key={teamName}
+                                        className="px-3 py-1 bg-orange-200/60 text-orange-800 rounded-full text-sm font-medium"
+                                    >
+                                        {teamName}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-4 mb-8">
-                        {CURRENT_TEAM_LIST.map((team) => (
-                            <button
-                                key={team.name}
-                                className={getButtonStyle(team)}
-                                onClick={() => handleTeamSelect(team)}
-                                disabled={selectedTeams.length === 2 && !selectedTeams.some(t => t.name === team.name)}
-                            >
-                                {team.name}
-                            </button>
-                        ))}
+                        {availableTeams.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <p className="text-lg font-medium">今日所有队伍都已参赛</p>
+                                <p className="text-sm mt-2">明天再来安排新的比赛吧！</p>
+                            </div>
+                        ) : (
+                            availableTeams.map((team) => (
+                                <button
+                                    key={team.name}
+                                    className={getButtonStyle(team)}
+                                    onClick={() => handleTeamSelect(team)}
+                                    disabled={selectedTeams.length === 2 && !selectedTeams.some(t => t.name === team.name)}
+                                >
+                                    {team.name}
+                                </button>
+                            ))
+                        )}
                     </div>
 
                     {/* 选择状态显示 */}
@@ -128,9 +163,9 @@ export default function SelectTeam({ onTeamsConfirm }: SelectTeamProps) {
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
                         onClick={handleConfirm}
-                        disabled={selectedTeams.length !== 2}
+                        disabled={selectedTeams.length !== 2 || availableTeams.length === 0}
                     >
-                        确定开始对战
+                        {availableTeams.length === 0 ? '今日队伍已全部参赛' : '确定开始对战'}
                     </button>
                 </div>
             </div>
