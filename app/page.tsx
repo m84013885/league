@@ -775,19 +775,21 @@ export default function Home() {
         {/* 统计数据图标 - 右上角 */}
         <button
           onClick={(e) => handlePlayerStatClick(player, isTeam1 ? team1!.name : team2!.name, isTeam1, e)}
-          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-500/20 hover:bg-blue-500/30 
-                     flex items-center justify-center transition-all duration-200 z-10"
-          aria-label="统计数据"
+          className="absolute top-1 right-1 w-10 h-10 rounded-full bg-blue-500/30 hover:bg-blue-500/50 
+                     shadow-lg hover:shadow-xl backdrop-blur-sm border border-blue-200/50
+                     flex items-center justify-center transition-all duration-200 z-10
+                     active:scale-95 hover:scale-105"
+          aria-label="查看统计数据"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-3 h-3 text-blue-600"
+            className="w-5 h-5 text-blue-700"
           >
             <path d="M3 3v18h18" />
             <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
