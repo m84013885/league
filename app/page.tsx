@@ -98,11 +98,12 @@ export default function Home() {
   const [currentGameId, setCurrentGameId] = useState<number | null>(null);
   const [players, setPlayers] = useState<{ id: number, name: string }[]>([]);
   const [teams, setTeams] = useState<{ id: number, name: string }[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 新增：操作队列和重试状态
+  const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
   // 新增：初始加载状态
   const [initialLoading, setInitialLoading] = useState(true);
-  // 新增：当前选中的队伍
-  const [currentTeam, setCurrentTeam] = useState<'team1' | 'team2'>('team1');
+  // 移除：当前选中的队伍状态（不再需要）
+  // const [currentTeam, setCurrentTeam] = useState<'team1' | 'team2'>('team1');
   // 新增：今天的比赛
   const [todayGames, setTodayGames] = useState<Game[]>([]);
   // 新增：游戏详情数据
@@ -177,55 +178,32 @@ export default function Home() {
     setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
   };
 
-  // 处理队伍指示器点击
-  const handleIndicatorClick = (team: 'team1' | 'team2') => {
-    setCurrentTeam(team);
-    // 滚动到对应的队伍页面
-    const element = document.getElementById(team);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // 移除：队伍指示器点击处理（不再需要）
+  // const handleIndicatorClick = (team: 'team1' | 'team2') => {
+  //   setCurrentTeam(team);
+  //   // 滚动到对应的队伍页面
+  //   const element = document.getElementById(team);
+  //   if (element) {
+  //     element.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // };
 
   const isTeamSelected = useMemo(() => {
     return !!team1 && !!team2;
   }, [team1, team2]);
 
-  // 监听滚动事件，更新当前队伍状态
-  useEffect(() => {
-    if (!isTeamSelected) return;
-
-    const handleScroll = () => {
-      const team1Element = document.getElementById('team1');
-      const team2Element = document.getElementById('team2');
-
-      if (team1Element && team2Element) {
-        const team1Rect = team1Element.getBoundingClientRect();
-        const team2Rect = team2Element.getBoundingClientRect();
-
-        // 判断哪个队伍在视窗中心
-        const windowCenter = window.innerWidth / 2;
-        const team1Center = team1Rect.left + team1Rect.width / 2;
-        const team2Center = team2Rect.left + team2Rect.width / 2;
-
-        const team1Distance = Math.abs(team1Center - windowCenter);
-        const team2Distance = Math.abs(team2Center - windowCenter);
-
-        if (team1Distance < team2Distance) {
-          setCurrentTeam('team1');
-        } else {
-          setCurrentTeam('team2');
-        }
-      }
-    };
-
-    // 添加滚动监听
-    const carousel = document.querySelector('.carousel');
-    if (carousel) {
-      carousel.addEventListener('scroll', handleScroll);
-      return () => carousel.removeEventListener('scroll', handleScroll);
-    }
-  }, [isTeamSelected]);
+  // 移除：滚动监听（不再需要）
+  // useEffect(() => {
+  //   if (!isTeamSelected) return;
+  //   const handleScroll = () => {
+  //     // 滚动处理逻辑
+  //   };
+  //   const carousel = document.querySelector('.carousel');
+  //   if (carousel) {
+  //     carousel.addEventListener('scroll', handleScroll);
+  //     return () => carousel.removeEventListener('scroll', handleScroll);
+  //   }
+  // }, [isTeamSelected]);
 
   const handlePlayerClick = (player: string, teamName: string, isTeam1: boolean) => {
     setSelectedPlayer({
@@ -259,6 +237,54 @@ export default function Home() {
     const fieldGoalAttempts = stats.attempts['2p'].total + stats.attempts['3p'].total;
     const fieldGoalMade = stats.attempts['2p'].made + stats.attempts['3p'].made;
     return fieldGoalAttempts === 0 ? 0 : Math.round((fieldGoalMade / fieldGoalAttempts) * 100);
+  };
+
+  // 通用乐观更新函数
+  const performOptimisticUpdate = async (
+    operationId: string,
+    optimisticUpdate: () => void,
+    apiCall: () => Promise<void>,
+    rollbackUpdate: () => void,
+    maxRetries = 3
+  ) => {
+    // 添加到等待队列
+    setPendingOperations(prev => new Set([...prev, operationId]));
+    
+    // 立即执行乐观更新
+    optimisticUpdate();
+    
+    // 尝试API调用
+    let retryCount = 0;
+    while (retryCount < maxRetries) {
+      try {
+        await apiCall();
+        // 成功，从等待队列移除
+        setPendingOperations(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(operationId);
+          return newSet;
+        });
+        return;
+      } catch (error) {
+        console.error(`API调用失败 (重试 ${retryCount}/${maxRetries}):`, error);
+        retryCount++;
+        if (retryCount < maxRetries) {
+          // 等待一段时间后重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    }
+    
+    // 所有重试都失败了
+    setPendingOperations(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(operationId);
+      return newSet;
+    });
+    
+    // 回滚更新
+    rollbackUpdate();
+    setMessage('网络错误，操作失败，请重试');
   };
 
   // 通用聚合球员数据函数
@@ -329,51 +355,113 @@ export default function Home() {
   // 6. handleScoreAdd/handleDeleteLastScore/handleStatAdd/handleStatDelete 全部改为数据库操作
   const handleScoreAdd = async (type: ShotType, isSuccess: boolean) => {
     if (!selectedPlayer || !currentGameId) return;
-    setLoading(true);
-    try {
-      const playerObj = players.find(p => p.name === selectedPlayer.name);
-      if (!playerObj) return;
-      let teamId: number | undefined = undefined;
-      if (selectedPlayer.isTeam1 && team1) {
-        teamId = teams.find(t => t.name === team1.name)?.id;
-      } else if (!selectedPlayer.isTeam1 && team2) {
-        teamId = teams.find(t => t.name === team2.name)?.id;
-      }
-      if (teamId === undefined) return;
-      await createGameDetailMain({
-        game_id: currentGameId,
-        player_id: playerObj.id,
-        team_id: teamId,
-        score: isSuccess ? (type === '2p' ? 2 : type === '3p' ? 3 : 1) : 0,
-        [`${type}_made`]: isSuccess ? 1 : 0,
-        [`${type}_attempts`]: 1,
-        fouls: 0,
-        flagrant_fouls: 0
-      });
-      // 拉取明细并聚合
-      const details = await getGameDetails(currentGameId);
-      setGameDetails(details.main as GameDetailMainRow[]);
-      setGameDataDetails(details.data as GameDetailDataRow[]);
-      const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
-      setPlayerStats(newStats);
-      // 同步更新队伍总分，保证 Setting 组件比分显示
-      if (team1) {
-        const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
-      }
-      if (team2) {
-        const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
-      }
-      setMessage('分数已记录');
-    } finally {
-      setLoading(false);
+    
+    const playerObj = players.find(p => p.name === selectedPlayer.name);
+    if (!playerObj) return;
+    
+    let teamId: number | undefined = undefined;
+    if (selectedPlayer.isTeam1 && team1) {
+      teamId = teams.find(t => t.name === team1.name)?.id;
+    } else if (!selectedPlayer.isTeam1 && team2) {
+      teamId = teams.find(t => t.name === team2.name)?.id;
     }
+    if (teamId === undefined) return;
+
+    // 乐观更新：先更新UI状态
+    const scoreToAdd = isSuccess ? (type === '2p' ? 2 : type === '3p' ? 3 : 1) : 0;
+    const playerName = selectedPlayer.name;
+    const currentStats = playerStats[playerName] || {
+      totalScore: 0,
+      fouls: 0,
+      flagrantFouls: 0,
+      attempts: { '2p': { made: 0, total: 0 }, '3p': { made: 0, total: 0 }, 'ft': { made: 0, total: 0 } },
+      stats: { rebounds: 0, assists: 0, steals: 0, turnovers: 0, blocks: 0 }
+    };
+
+    await performOptimisticUpdate(
+      `score-${playerName}-${type}-${isSuccess}-${Date.now()}`,
+      // 乐观更新
+      () => {
+        const newStats = { ...currentStats };
+        newStats.totalScore += scoreToAdd;
+        newStats.attempts[type].total += 1;
+        if (isSuccess) {
+          newStats.attempts[type].made += 1;
+        }
+        
+        setPlayerStats(prev => ({
+          ...prev,
+          [playerName]: newStats
+        }));
+        
+        // 同步更新队伍总分
+        if (selectedPlayer.isTeam1 && team1) {
+          const newTeam1Score = team1.list.reduce((total, player) => {
+            const stats = player === playerName ? newStats : (playerStats[player] || { totalScore: 0 });
+            return total + (stats.totalScore || 0);
+          }, 0);
+          setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
+        } else if (!selectedPlayer.isTeam1 && team2) {
+          const newTeam2Score = team2.list.reduce((total, player) => {
+            const stats = player === playerName ? newStats : (playerStats[player] || { totalScore: 0 });
+            return total + (stats.totalScore || 0);
+          }, 0);
+          setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
+        }
+        
+        setMessage('分数已记录');
+      },
+      // API 调用
+      async () => {
+        await createGameDetailMain({
+          game_id: currentGameId,
+          player_id: playerObj.id,
+          team_id: teamId!,
+          score: scoreToAdd,
+          [`${type}_made`]: isSuccess ? 1 : 0,
+          [`${type}_attempts`]: 1,
+          fouls: 0,
+          flagrant_fouls: 0
+        });
+        
+        // 拉取最新数据并同步
+        const details = await getGameDetails(currentGameId);
+        setGameDetails(details.main as GameDetailMainRow[]);
+        setGameDataDetails(details.data as GameDetailDataRow[]);
+        const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
+        setPlayerStats(newStats);
+        
+        // 同步更新队伍总分
+        if (team1) {
+          const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
+        }
+        if (team2) {
+          const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
+        }
+      },
+      // 回滚更新
+      () => {
+        setPlayerStats(prev => ({
+          ...prev,
+          [playerName]: currentStats
+        }));
+        
+        // 回滚队伍总分
+        if (selectedPlayer.isTeam1 && team1) {
+          const rollbackTeam1Score = team1.list.reduce((total, player) => total + (playerStats[player]?.totalScore || 0), 0);
+          setTeam1(prev => prev ? { ...prev, totalScore: rollbackTeam1Score } : prev);
+        } else if (!selectedPlayer.isTeam1 && team2) {
+          const rollbackTeam2Score = team2.list.reduce((total, player) => total + (playerStats[player]?.totalScore || 0), 0);
+          setTeam2(prev => prev ? { ...prev, totalScore: rollbackTeam2Score } : prev);
+        }
+      }
+    );
   };
 
   const handleDeleteLastScore = async (targetType: ShotType, targetIsSuccess: boolean) => {
     if (!selectedPlayer || !currentGameId) return;
-    setLoading(true);
     try {
       const playerObj = players.find(p => p.name === selectedPlayer.name);
       if (!playerObj) return;
@@ -418,8 +506,6 @@ export default function Home() {
       setMessage(`已删除 ${selectedPlayer.name} 的${targetType === '2p' ? '2分球' : targetType === '3p' ? '3分球' : '罚球'}${targetIsSuccess ? '命中' : '不中'}记录`);
     } catch {
       setMessage('删除失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -445,55 +531,90 @@ export default function Home() {
 
   const handleFoulAdd = async (player: string, isFlagrant: boolean) => {
     if (!currentGameId) return;
-    setLoading(true);
-    try {
-      const playerObj = players.find(p => p.name === player);
-      if (!playerObj) return;
-      let teamId: number | undefined = undefined;
-      if (team1 && team1.list.includes(player)) {
-        teamId = teams.find(t => t.name === team1.name)?.id;
-      } else if (team2 && team2.list.includes(player)) {
-        teamId = teams.find(t => t.name === team2.name)?.id;
-      }
-      if (teamId === undefined) return;
-      await createGameDetailMain({
-        game_id: currentGameId,
-        player_id: playerObj.id,
-        team_id: teamId,
-        fouls: isFlagrant ? 0 : 1,
-        flagrant_fouls: isFlagrant ? 1 : 0,
-        score: 0,
-        '2p_made': 0,
-        '2p_attempts': 0,
-        '3p_made': 0,
-        '3p_attempts': 0,
-        'ft_made': 0,
-        'ft_attempts': 0
-      });
-      // 拉取明细并聚合
-      const details = await getGameDetails(currentGameId);
-      setGameDetails(details.main as GameDetailMainRow[]);
-      setGameDataDetails(details.data as GameDetailDataRow[]);
-      const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
-      setPlayerStats(newStats);
-      // 同步更新队伍总分，保证 Setting 组件比分显示
-      if (team1) {
-        const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
-      }
-      if (team2) {
-        const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
-      }
-      setMessage(`${player} ${isFlagrant ? '恶意犯规' : '犯规'}`);
-    } finally {
-      setLoading(false);
+    
+    const playerObj = players.find(p => p.name === player);
+    if (!playerObj) return;
+    
+    let teamId: number | undefined = undefined;
+    if (team1 && team1.list.includes(player)) {
+      teamId = teams.find(t => t.name === team1.name)?.id;
+    } else if (team2 && team2.list.includes(player)) {
+      teamId = teams.find(t => t.name === team2.name)?.id;
     }
+    if (teamId === undefined) return;
+
+    const currentStats = playerStats[player] || {
+      totalScore: 0,
+      fouls: 0,
+      flagrantFouls: 0,
+      attempts: { '2p': { made: 0, total: 0 }, '3p': { made: 0, total: 0 }, 'ft': { made: 0, total: 0 } },
+      stats: { rebounds: 0, assists: 0, steals: 0, turnovers: 0, blocks: 0 }
+    };
+
+    await performOptimisticUpdate(
+      `foul-${player}-${isFlagrant}-${Date.now()}`,
+      // 乐观更新
+      () => {
+        const newStats = { ...currentStats };
+        if (isFlagrant) {
+          newStats.flagrantFouls += 1;
+        } else {
+          newStats.fouls += 1;
+        }
+        
+        setPlayerStats(prev => ({
+          ...prev,
+          [player]: newStats
+        }));
+        
+        setMessage(`${player} ${isFlagrant ? '恶意犯规' : '犯规'}`);
+      },
+      // API 调用
+      async () => {
+        await createGameDetailMain({
+          game_id: currentGameId,
+          player_id: playerObj.id,
+          team_id: teamId!,
+          fouls: isFlagrant ? 0 : 1,
+          flagrant_fouls: isFlagrant ? 1 : 0,
+          score: 0,
+          '2p_made': 0,
+          '2p_attempts': 0,
+          '3p_made': 0,
+          '3p_attempts': 0,
+          'ft_made': 0,
+          'ft_attempts': 0
+        });
+        
+        // 拉取最新数据并同步
+        const details = await getGameDetails(currentGameId);
+        setGameDetails(details.main as GameDetailMainRow[]);
+        setGameDataDetails(details.data as GameDetailDataRow[]);
+        const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
+        setPlayerStats(newStats);
+        
+        // 同步更新队伍总分
+        if (team1) {
+          const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
+        }
+        if (team2) {
+          const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
+        }
+      },
+      // 回滚更新
+      () => {
+        setPlayerStats(prev => ({
+          ...prev,
+          [player]: currentStats
+        }));
+      }
+    );
   };
 
   const handleFoulDelete = async (player: string, isFlagrant: boolean) => {
     if (!currentGameId) return;
-    setLoading(true);
     try {
       const playerObj = players.find(p => p.name === player);
       if (!playerObj) return;
@@ -533,8 +654,6 @@ export default function Home() {
       setMessage(`删除 ${player} 的${isFlagrant ? '恶意犯规' : '犯规'}记录`);
     } catch {
       setMessage('删除失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -560,89 +679,132 @@ export default function Home() {
   // 添加统计数据处理函数
   const handleStatAdd = async (type: StatType) => {
     if (!selectedPlayer || !currentGameId) return;
-    setLoading(true);
-    try {
-      const playerObj = players.find(p => p.name === selectedPlayer.name);
-      if (!playerObj) return;
-      let teamId: number | undefined = undefined;
-      if (selectedPlayer.isTeam1 && team1) {
-        teamId = teams.find(t => t.name === team1.name)?.id;
-      } else if (!selectedPlayer.isTeam1 && team2) {
-        teamId = teams.find(t => t.name === team2.name)?.id;
-      }
-      if (teamId === undefined) return;
-
-      // 创建统计数据记录
-      const statData: {
-        game_id: number;
-        player_id: number;
-        team_id: number;
-        rebounds?: number;
-        assists?: number;
-        steals?: number;
-        turnovers?: number;
-        blocks?: number;
-      } = {
-        game_id: currentGameId,
-        player_id: playerObj.id,
-        team_id: teamId
-      };
-      
-      // 根据类型设置对应的统计数据
-      switch (type) {
-        case 'rebound':
-          statData.rebounds = 1;
-          break;
-        case 'assist':
-          statData.assists = 1;
-          break;
-        case 'steal':
-          statData.steals = 1;
-          break;
-        case 'turnover':
-          statData.turnovers = 1;
-          break;
-        case 'block':
-          statData.blocks = 1;
-          break;
-      }
-
-      await createGameDetailData(statData);
-
-      // 拉取明细并聚合
-      const details = await getGameDetails(currentGameId);
-      setGameDetails(details.main as GameDetailMainRow[]);
-      setGameDataDetails(details.data as GameDetailDataRow[]);
-      const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
-      setPlayerStats(newStats);
-
-      const statLabels = {
-        rebound: '篮板',
-        assist: '助攻',
-        steal: '抢断',
-        turnover: '失误',
-        block: '盖帽'
-      };
-
-      setMessage(`${selectedPlayer.name} +1 ${statLabels[type]}`);
-
-      // 同步更新队伍总分，保证 Setting 组件比分显示
-      if (team1) {
-        const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
-      }
-      if (team2) {
-        const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
-        setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
-      }
-    } finally {
-      setLoading(false);
+    
+    const playerObj = players.find(p => p.name === selectedPlayer.name);
+    if (!playerObj) return;
+    
+    let teamId: number | undefined = undefined;
+    if (selectedPlayer.isTeam1 && team1) {
+      teamId = teams.find(t => t.name === team1.name)?.id;
+    } else if (!selectedPlayer.isTeam1 && team2) {
+      teamId = teams.find(t => t.name === team2.name)?.id;
     }
+    if (teamId === undefined) return;
+
+    const playerName = selectedPlayer.name;
+    const currentStats = playerStats[playerName] || {
+      totalScore: 0,
+      fouls: 0,
+      flagrantFouls: 0,
+      attempts: { '2p': { made: 0, total: 0 }, '3p': { made: 0, total: 0 }, 'ft': { made: 0, total: 0 } },
+      stats: { rebounds: 0, assists: 0, steals: 0, turnovers: 0, blocks: 0 }
+    };
+
+    const statLabels = {
+      rebound: '篮板',
+      assist: '助攻',
+      steal: '抢断',
+      turnover: '失误',
+      block: '盖帽'
+    };
+
+    await performOptimisticUpdate(
+      `stat-${playerName}-${type}-${Date.now()}`,
+      // 乐观更新
+      () => {
+        const newStats = { ...currentStats };
+        switch (type) {
+          case 'rebound':
+            newStats.stats.rebounds += 1;
+            break;
+          case 'assist':
+            newStats.stats.assists += 1;
+            break;
+          case 'steal':
+            newStats.stats.steals += 1;
+            break;
+          case 'turnover':
+            newStats.stats.turnovers += 1;
+            break;
+          case 'block':
+            newStats.stats.blocks += 1;
+            break;
+        }
+        
+        setPlayerStats(prev => ({
+          ...prev,
+          [playerName]: newStats
+        }));
+        
+        setMessage(`${playerName} +1 ${statLabels[type]}`);
+      },
+      // API 调用
+      async () => {
+        const statData: {
+          game_id: number;
+          player_id: number;
+          team_id: number;
+          rebounds?: number;
+          assists?: number;
+          steals?: number;
+          turnovers?: number;
+          blocks?: number;
+        } = {
+          game_id: currentGameId,
+          player_id: playerObj.id,
+          team_id: teamId!
+        };
+        
+        // 根据类型设置对应的统计数据
+        switch (type) {
+          case 'rebound':
+            statData.rebounds = 1;
+            break;
+          case 'assist':
+            statData.assists = 1;
+            break;
+          case 'steal':
+            statData.steals = 1;
+            break;
+          case 'turnover':
+            statData.turnovers = 1;
+            break;
+          case 'block':
+            statData.blocks = 1;
+            break;
+        }
+
+        await createGameDetailData(statData);
+
+        // 拉取最新数据并同步
+        const details = await getGameDetails(currentGameId);
+        setGameDetails(details.main as GameDetailMainRow[]);
+        setGameDataDetails(details.data as GameDetailDataRow[]);
+        const newStats = aggregatePlayerStats(details.main as GameDetailMainRow[], details.data as GameDetailDataRow[]);
+        setPlayerStats(newStats);
+
+        // 同步更新队伍总分
+        if (team1) {
+          const newTeam1Score = team1.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
+        }
+        if (team2) {
+          const newTeam2Score = team2.list.reduce((total, player) => total + (newStats[player]?.totalScore || 0), 0);
+          setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
+        }
+      },
+      // 回滚更新
+      () => {
+        setPlayerStats(prev => ({
+          ...prev,
+          [playerName]: currentStats
+        }));
+      }
+    );
   };
 
   const handleStatDelete = async (type: StatType) => {
     if (!selectedPlayer || !currentGameId) return;
-    setLoading(true);
     try {
       const playerObj = players.find(p => p.name === selectedPlayer.name);
       if (!playerObj) return;
@@ -714,8 +876,6 @@ export default function Home() {
       }
     } catch {
       setMessage('删除失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -738,6 +898,9 @@ export default function Home() {
     const textColorClass = isTeam1 ? 'text-yellow-900' : 'text-purple-900';
     const shootingPercentage = calculateShootingPercentage(stats);
     const hasShots = stats.attempts['2p'].total > 0 || stats.attempts['3p'].total > 0;
+    
+    // 检查是否有正在进行的操作
+    const hasPendingOperation = Array.from(pendingOperations).some(op => op.includes(player));
 
     const handleClick = () => {
       // 直接执行点击操作
@@ -748,26 +911,31 @@ export default function Home() {
       <div
         key={player}
         className={`player-card bg-gradient-to-br ${gradientClass} 
-        rounded-xl p-3 text-center flex flex-col justify-between gap-1
-        shadow-md hover:shadow-xl transition-all duration-300 relative min-h-[5.5rem]
+        rounded-lg lg:rounded-xl p-2 lg:p-3 text-center flex flex-col justify-between gap-1
+        shadow-md hover:shadow-xl transition-all duration-300 relative min-h-[4.5rem] lg:min-h-[5.5rem]
         border border-opacity-20 ${isTeam1 ? 'border-yellow-400' : 'border-purple-400'}`}
         onClick={handleClick}
       >
         <div className="flex flex-col items-center justify-start w-full">
-          <span className={`${textColorClass} font-bold text-lg truncate w-[90%] mb-1`}>
-            {player}
-          </span>
-          <div className={`${textColorClass} text-xl font-bold flex items-center justify-center gap-1 score-animation`}>
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <span className={`${textColorClass} font-bold text-sm lg:text-lg truncate`}>
+              {player}
+            </span>
+            {hasPendingOperation && (
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current opacity-70"></div>
+            )}
+          </div>
+          <div className={`${textColorClass} text-lg lg:text-xl font-bold flex items-center justify-center gap-1 score-animation`}>
             <span>{stats.totalScore}</span>
-            <span className="text-sm opacity-70">分</span>
+            <span className="text-xs lg:text-sm opacity-70">分</span>
           </div>
         </div>
 
         {hasShots && (
           <div className={`${textColorClass} text-xs font-medium flex items-center justify-center gap-0.5 mt-auto`}>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5">
-              <span className="opacity-70">命中</span>
-              <span className="font-bold tabular-nums">{shootingPercentage}%</span>
+            <div className="flex items-center gap-0.5 lg:gap-1 px-1 lg:px-2 py-0.5 rounded-full bg-black/5">
+              <span className="opacity-70 text-xs">命中</span>
+              <span className="font-bold tabular-nums text-xs">{shootingPercentage}%</span>
             </div>
           </div>
         )}
@@ -775,7 +943,7 @@ export default function Home() {
         {/* 统计数据图标 - 右上角 */}
         <button
           onClick={(e) => handlePlayerStatClick(player, isTeam1 ? team1!.name : team2!.name, isTeam1, e)}
-          className="absolute top-1 right-1 w-10 h-10 rounded-full bg-blue-500/30 hover:bg-blue-500/50 
+          className="absolute top-0.5 right-0.5 lg:top-1 lg:right-1 w-7 h-7 lg:w-10 lg:h-10 rounded-full bg-blue-500/30 hover:bg-blue-500/50 
                      shadow-lg hover:shadow-xl backdrop-blur-sm border border-blue-200/50
                      flex items-center justify-center transition-all duration-200 z-10
                      active:scale-95 hover:scale-105"
@@ -789,7 +957,7 @@ export default function Home() {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-5 h-5 text-blue-700"
+            className="w-4 h-4 lg:w-5 lg:h-5 text-blue-700"
           >
             <path d="M3 3v18h18" />
             <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
@@ -824,7 +992,7 @@ export default function Home() {
 
         {/* 当有命中率时，统计数据指示器显示在右上角 */}
         {(stats.stats.rebounds > 0 || stats.stats.assists > 0 || stats.stats.steals > 0 || stats.stats.blocks > 0) && hasShots && (
-          <div className="absolute top-8 right-2 flex items-center gap-0.5 max-w-[calc(100%-1rem)]">
+          <div className="absolute top-7 right-1 lg:top-8 lg:right-2 flex items-center gap-0.5 max-w-[calc(100%-1rem)]">
             {stats.stats.rebounds > 0 && (
               <div className="text-[10px] px-0.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 font-medium">
                 {stats.stats.rebounds}板
@@ -850,7 +1018,7 @@ export default function Home() {
 
         {/* 犯规指示器 - 左上角 */}
         {(stats.fouls > 0 || stats.flagrantFouls > 0) && (
-          <div className="absolute top-2 left-2 flex items-center gap-1">
+          <div className="absolute top-1 left-1 lg:top-2 lg:left-2 flex items-center gap-1">
             {stats.fouls > 0 && (
               <div className="text-xs px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700">
                 {stats.fouls}
@@ -869,7 +1037,6 @@ export default function Home() {
 
   // 新增：快速进入今天的比赛
   const handleQuickEnterGame = async (game: Game) => {
-    setLoading(true);
     try {
       setCurrentGameId(game.id);
       // 查找队伍
@@ -899,8 +1066,8 @@ export default function Home() {
       setTeam1(prev => prev ? { ...prev, totalScore: newTeam1Score } : prev);
       setTeam2(prev => prev ? { ...prev, totalScore: newTeam2Score } : prev);
       setMessage('已进入今日比赛');
-    } finally {
-      setLoading(false);
+    } catch {
+      setMessage('进入比赛失败');
     }
   };
 
@@ -983,7 +1150,6 @@ export default function Home() {
             <button
               onClick={async () => {
                 if (!currentGameId) return;
-                setLoading(true);
                 try {
                   // 重新拉取比赛详情数据
                   const details = await getGameDetails(currentGameId);
@@ -1007,8 +1173,6 @@ export default function Home() {
                   setMessage('数据已刷新');
                 } catch {
                   setMessage('刷新失败');
-                } finally {
-                  setLoading(false);
                 }
               }}
               className="btn-hover-effect p-3 rounded-full bg-blue-100/80 hover:bg-blue-200/80 backdrop-blur-md shadow-lg 
@@ -1070,58 +1234,45 @@ export default function Home() {
             </div>
           ) : (
             <div className="w-full h-full relative">
-              <div className="carousel w-full h-full snap-x snap-mandatory">
+              {/* 两个队伍在同一页面显示 */}
+              <div className="flex flex-col lg:flex-row w-full h-full gap-2 lg:gap-4 p-2 lg:p-4 pb-20 lg:pb-24">
                 {/* 队伍一 */}
-                <div id="team1" className="carousel-item w-full h-full relative snap-center">
-                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 pb-24">
-                    <div className="glass-effect rounded-2xl p-4 mb-6 text-center">
-                      <h3 className="text-3xl font-bold text-yellow-800 mb-2">
+                <div id="team1" className="flex-1 min-h-0 lg:flex-1">
+                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl lg:rounded-2xl p-3 lg:p-4">
+                    <div className="glass-effect rounded-xl lg:rounded-2xl p-3 lg:p-4 mb-3 lg:mb-4 text-center flex-shrink-0">
+                      <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold text-yellow-800 mb-1 lg:mb-2">
                         {team1?.name}
                       </h3>
-                      <div className="text-xl text-yellow-700 font-bold">
+                      <div className="text-base lg:text-lg xl:text-xl text-yellow-700 font-bold">
                         总分：<span className="score-animation">{team1?.totalScore || 0}</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
-                      {team1?.list.map(player => renderPlayerCard(player, true))}
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 lg:gap-3 pb-2">
+                        {team1?.list.map(player => renderPlayerCard(player, true))}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* 队伍二 */}
-                <div id="team2" className="carousel-item w-full h-full relative snap-center">
-                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-purple-50 to-purple-100 p-6 pb-24">
-                    <div className="glass-effect rounded-2xl p-4 mb-6 text-center">
-                      <h3 className="text-3xl font-bold text-purple-800 mb-2">
+                <div id="team2" className="flex-1 min-h-0 lg:flex-1">
+                  <div className="flex flex-col w-full h-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl lg:rounded-2xl p-3 lg:p-4">
+                    <div className="glass-effect rounded-xl lg:rounded-2xl p-3 lg:p-4 mb-3 lg:mb-4 text-center flex-shrink-0">
+                      <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold text-purple-800 mb-1 lg:mb-2">
                         {team2?.name}
                       </h3>
-                      <div className="text-xl text-purple-700 font-bold">
+                      <div className="text-base lg:text-lg xl:text-xl text-purple-700 font-bold">
                         总分：<span className="score-animation">{team2?.totalScore || 0}</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 flex-1">
-                      {team2?.list.map(player => renderPlayerCard(player, false))}
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 lg:gap-3 pb-2">
+                        {team2?.list.map(player => renderPlayerCard(player, false))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* 队伍切换指示器 */}
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-gray-200/50">
-                <button
-                  onClick={() => handleIndicatorClick('team1')}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 transform
-                    ${currentTeam === 'team1'
-                      ? 'bg-yellow-500 scale-125 ring-4 ring-yellow-200'
-                      : 'bg-yellow-200 hover:bg-yellow-300'}`}
-                />
-                <button
-                  onClick={() => handleIndicatorClick('team2')}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 transform
-                    ${currentTeam === 'team2'
-                      ? 'bg-purple-500 scale-125 ring-4 ring-purple-200'
-                      : 'bg-purple-200 hover:bg-purple-300'}`}
-                />
               </div>
             </div>
           )}
@@ -1165,11 +1316,7 @@ export default function Home() {
         onStatDelete={handleStatDelete}
         stats={selectedPlayer ? playerStats[selectedPlayer.name] : undefined}
       />
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl px-6 py-4 shadow-lg text-lg font-bold">数据同步中...</div>
-        </div>
-      )}
+      {/* 移除loading界面，使用乐观更新 */}
     </>
   );
 }
